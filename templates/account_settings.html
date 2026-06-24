@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>帳號設定 — Interview Platform</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/style.css">
+  <style>
+    /* 核心佈局 */
+    .page-header { display: none; }
+    .page { padding-top: 20px; }
+
+    /* --- 區塊樣式 --- */
+    .card {
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+      border: 1px solid #f0f0f0;
+      margin-bottom: 25px;
+      overflow: hidden;
+    }
+    .card-header {
+      background: #fafafa;
+      padding: 18px 25px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .card-title {
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: #333;
+    }
+
+    /* --- 基本表單樣式 --- */
+    input, select, textarea {
+      border: 1px solid #ddd !important;
+      border-radius: 6px !important;
+      padding: 8px 12px !important;
+      width: 100%;
+      box-sizing: border-box;
+      font-family: inherit;
+    }
+    label {
+      font-size: 13px;
+      color: #666;
+      margin-bottom: 4px;
+      display: block;
+    }
+    .form-group { margin-bottom: 15px; }
+
+    .btn-primary {
+      background: #e8961a;
+      color: white;
+      border: none;
+      padding: 12px;
+      border-radius: 8px;
+      font-weight: 500;
+      cursor: pointer;
+    }
+    .btn-primary:hover { opacity: 0.9; }
+
+    /* --- Modal --- */
+    .modal-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(15, 23, 42, 0.3);
+      backdrop-filter: blur(4px);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+    }
+
+    /* --- 頁面標題列 --- */
+    .page-title-bar {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 28px;
+    }
+    .page-title-bar h2 {
+      font-size: 20px;
+      font-weight: 500;
+      color: #1e293b;
+      margin: 0;
+    }
+    .page-title-bar a {
+      font-size: 13px;
+      color: #94a3b8;
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .page-title-bar a:hover { color: #475569; }
+
+    /* --- Responsive --- */
+    @media (max-width: 640px) {
+      .page { padding-top: 10px; }
+      .card { border-radius: 10px; margin-bottom: 16px; }
+      .card-header { padding: 14px 16px; }
+    }
+  </style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-logo">INTERVIEW <span>PLATFORM</span></div>
+  <div class="nav-links">
+    <a href="/">應徵者預約</a>
+    <a href="/hr">HR 後台</a>
+    <a href="/hr/bookings">查看預約</a>
+    <a href="#" id="logout-btn">登出</a>
+  </div>
+</nav>
+
+<div class="page">
+  <div class="one-col" style="max-width: 650px; margin: 0 auto;">
+
+    <!-- 頁面標題 + 返回連結 -->
+    <div class="page-title-bar">
+      <a href="/hr">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"
+          stroke-linecap="round" stroke-linejoin="round">
+          <path d="M10 3L5 8l5 5"/>
+        </svg>
+        返回 HR 後台
+      </a>
+    </div>
+        <!-- ── HR 帳號管理 ── -->
+    <div class="card">
+      <div class="card-header" style="cursor:default;">
+        <div class="card-title"> HR 帳號管理</div>
+        <button class="btn-primary" style="padding:7px 18px; font-size:13px;"
+          onclick="openAddAdminModal()">＋ 新增帳號</button>
+      </div>
+      <div class="card-content" style="padding:0;">
+        <div id="hr-admins-loading" style="padding:24px; color:#999; font-size:13px;">載入中…</div>
+        <table id="hr-admins-table" style="display:none; width:100%; border-collapse:collapse; font-size:13px;">
+          <thead>
+            <tr style="background:#f8fafc; border-bottom:1px solid #e8edf2;">
+              <th style="padding:10px 16px; text-align:left; font-weight:600; color:#555;">Email</th>
+              <th style="padding:10px 16px; text-align:center; font-weight:600; color:#555;">狀態</th>
+              <th style="padding:10px 16px; text-align:left; font-weight:600; color:#555;">建立時間</th>
+              <th style="padding:10px 16px; text-align:center; font-weight:600; color:#555;">操作</th>
+            </tr>
+          </thead>
+          <tbody id="hr-admins-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ── 修改帳號資料 ── -->
+    <div class="card">
+      <div class="card-header" style="cursor:default;">
+        <div class="card-title">🔐 修改帳號資料</div>
+      </div>
+      <div class="card-content" style="padding: 28px 30px;">
+
+        <div style="margin-bottom:22px; font-size:14px; color:#555;">
+          目前帳號：<strong id="account-email-display">載入中…</strong>
+        </div>
+
+        <!-- 步驟一：填寫變更資料 -->
+        <div id="account-step1">
+          <form id="account-update-form" onsubmit="handleRequestOtp(event)">
+            <div class="form-group">
+              <label>目前密碼 <span style="color:#e74c3c;">*</span></label>
+              <input type="password" id="acc-current-password" placeholder="請輸入目前密碼" required>
+            </div>
+
+            <hr style="border:none; border-top:1px solid #f0f0f0; margin: 18px 0;">
+
+            <div class="form-group">
+              <label>新 Email（不改則留空）</label>
+              <input type="email" id="acc-new-email" placeholder="例如：newemail@company.com">
+            </div>
+
+            <div class="form-group">
+              <label>新密碼（不改則留空）</label>
+              <input type="password" id="acc-new-password" placeholder="請輸入新密碼">
+            </div>
+
+            <div class="form-group">
+              <label>確認新密碼</label>
+              <input type="password" id="acc-confirm-password" placeholder="再次輸入新密碼">
+            </div>
+
+            <div style="display:flex; justify-content:flex-end; margin-top:10px;">
+              <button type="submit" class="btn-primary" style="padding: 10px 28px;">
+                發送驗證碼
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <!-- 步驟二：輸入驗證碼 -->
+        <div id="account-step2" style="display:none;">
+          <div style="background:#fffbeb; border:1px solid #fde68a; border-radius:8px;
+                      padding:14px 16px; margin-bottom:22px; font-size:13px; color:#92400e;">
+            ✉️ 驗證碼已寄送至目前的 Email，請在 <strong>10 分鐘內</strong>完成驗證。
+          </div>
+
+          <form id="otp-verify-form" onsubmit="handleVerifyOtp(event)">
+            <div class="form-group">
+              <label>Email 驗證碼 <span style="color:#e74c3c;">*</span></label>
+              <input type="text" id="acc-otp-code"
+                placeholder="請輸入 6 位數驗證碼"
+                maxlength="6"
+                inputmode="numeric"
+                autocomplete="one-time-code"
+                style="font-size:22px; letter-spacing:8px; text-align:center;"
+                required>
+            </div>
+
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-top:10px;">
+              <button type="button"
+                onclick="cancelOtp()"
+                style="background:none; border:none; color:#94a3b8; cursor:pointer; font-size:13px; padding:0;">
+                ← 重新填寫
+              </button>
+              <button type="submit" class="btn-primary" style="padding: 10px 28px;">
+                確認驗證
+              </button>
+            </div>
+          </form>
+        </div>
+
+      </div>
+    </div>
+
+
+
+  </div>
+</div>
+
+<!-- ── 新增 / 編輯 HR 帳號 Modal ── -->
+<div id="admin-modal-overlay"
+  style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:1000; align-items:center; justify-content:center;">
+  <div style="background:#fff; border-radius:14px; padding:32px 30px; width:380px; max-width:95vw;
+              box-shadow:0 8px 32px rgba(0,0,0,.18); position:relative;">
+    <button onclick="closeAdminModal()"
+      style="position:absolute; top:14px; right:16px; background:none; border:none; font-size:20px; color:#aaa; cursor:pointer;">✕</button>
+    <div id="admin-modal-title" style="font-size:16px; font-weight:700; margin-bottom:22px; color:#1e293b;"></div>
+
+    <div class="form-group">
+      <label>Email <span style="color:#e74c3c;">*</span></label>
+      <input type="email" id="admin-modal-email" placeholder="hr@company.com">
+    </div>
+    <div class="form-group">
+      <label id="admin-modal-pwd-label">密碼 <span style="color:#e74c3c;">*</span></label>
+      <input type="password" id="admin-modal-password" placeholder="輸入新密碼（留空則不變更）">
+    </div>
+    <div id="admin-modal-active-wrap" class="form-group" style="display:none;">
+      <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+        <input type="checkbox" id="admin-modal-active" style="width:16px;height:16px;">
+        帳號啟用中
+      </label>
+    </div>
+
+    <div id="admin-modal-error" style="color:#e74c3c; font-size:12px; margin-bottom:10px; display:none;"></div>
+
+    <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:6px;">
+      <button onclick="closeAdminModal()"
+        style="padding:9px 20px; border-radius:8px; border:1px solid #e2e8f0; background:#f8fafc; color:#555; font-size:13px; cursor:pointer;">取消</button>
+      <button onclick="submitAdminModal()"
+        class="btn-primary" style="padding:9px 22px; font-size:13px;">儲存</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ── Toast 通知 ──────────────────────────────────────────────
+const toast = (msg, type = 'success') => {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = `show ${type}`;
+  setTimeout(() => el.className = '', 2800);
+};
+
+// ── 登出 ────────────────────────────────────────────────────
+document.getElementById('logout-btn').addEventListener('click', async (e) => {
+  e.preventDefault();
+  await fetch('/api/hr/logout', { method: 'POST', credentials: 'same-origin' });
+  window.location.href = '/hr/login';
+});
+
+// ── 頁面初始載入 ─────────────────────────────────────────────
+(async () => {
+  await loadCurrentHrEmail();
+  await loadHRAdmins();
+})();
+
+// ── 載入目前 HR Email ────────────────────────────────────────
+async function loadCurrentHrEmail() {
+  try {
+    const res = await fetch('/api/hr/me', { credentials: 'same-origin' });
+    if (res.ok) {
+      const data = await res.json();
+      document.getElementById('account-email-display').textContent = data.email;
+    }
+  } catch (e) {
+    document.getElementById('account-email-display').textContent = '（無法取得）';
+  }
+}
+
+// ── 步驟一：送出變更申請 → 發 OTP 到目前 email ───────────────
+async function handleRequestOtp(event) {
+  event.preventDefault();
+
+  const currentPassword = document.getElementById('acc-current-password').value;
+  const newEmail        = document.getElementById('acc-new-email').value.trim();
+  const newPassword     = document.getElementById('acc-new-password').value;
+  const confirmPassword = document.getElementById('acc-confirm-password').value;
+
+  if (!newEmail && !newPassword) {
+    toast('請至少填寫新 Email 或新密碼其中一項', 'error'); return;
+  }
+  if (newPassword && newPassword !== confirmPassword) {
+    toast('新密碼與確認密碼不一致', 'error'); return;
+  }
+
+  const body = { current_password: currentPassword };
+  if (newEmail)    body.new_email    = newEmail;
+  if (newPassword) body.new_password = newPassword;
+
+  try {
+    const res = await fetch('/api/hr/me/request-otp', {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      toast(err.detail || '發送失敗', 'error'); return;
+    }
+
+    // 切換到步驟二
+    document.getElementById('account-step1').style.display = 'none';
+    document.getElementById('account-step2').style.display = 'block';
+    document.getElementById('acc-otp-code').value = '';
+    document.getElementById('acc-otp-code').focus();
+    toast('驗證碼已寄出，請查收 Email', 'success');
+
+  } catch (e) {
+    toast('發生錯誤，請稍後再試', 'error');
+  }
+}
+
+// ── 步驟二：送出 OTP 驗證碼 ──────────────────────────────────
+async function handleVerifyOtp(event) {
+  event.preventDefault();
+
+  const otpCode = document.getElementById('acc-otp-code').value.trim();
+  if (!otpCode) { toast('請輸入驗證碼', 'error'); return; }
+
+  try {
+    const res = await fetch(`/api/hr/me/verify-otp?otp_code=${encodeURIComponent(otpCode)}`, {
+      method: 'POST',
+      credentials: 'same-origin',
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      toast(err.detail || '驗證失敗', 'error'); return;
+    }
+
+    const data = await res.json();
+    toast('帳號資料已成功更新！', 'success');
+
+    // 重設 UI 回步驟一
+    cancelOtp();
+    document.getElementById('account-update-form').reset();
+    document.getElementById('account-email-display').textContent = data.email;
+
+    // 若改了 email，需重新登入
+    const newEmail = document.getElementById('acc-new-email').value.trim();
+    if (newEmail) {
+      toast('Email 已變更，即將重新登入…', 'success');
+      setTimeout(() => { window.location.href = '/hr/login'; }, 1800);
+    }
+
+  } catch (e) {
+    toast('發生錯誤，請稍後再試', 'error');
+  }
+}
+
+// ── 取消驗證 → 回步驟一 ──────────────────────────────────────
+function cancelOtp() {
+  document.getElementById('account-step2').style.display = 'none';
+  document.getElementById('account-step1').style.display = 'block';
+}
+
+// ── 載入 HR 帳號列表 ─────────────────────────────────────────
+async function loadHRAdmins() {
+  try {
+    const res = await fetch('/api/hr/admins');
+    const admins = await res.json();
+    const tbody = document.getElementById('hr-admins-tbody');
+    tbody.innerHTML = '';
+
+    admins.forEach(a => {
+      const tr = document.createElement('tr');
+      tr.style.borderBottom = '1px solid #f0f4f8';
+      tr.innerHTML = `
+        <td style="padding:10px 16px; color:#1e293b;">${escHtml(a.email)}</td>
+        <td style="padding:10px 16px; text-align:center;">
+          <span style="display:inline-block; padding:2px 10px; border-radius:99px; font-size:11px; font-weight:600;
+            background:${a.is_active ? '#dcfce7' : '#fee2e2'};
+            color:${a.is_active ? '#166534' : '#991b1b'};">
+            ${a.is_active ? '啟用' : '停用'}
+          </span>
+        </td>
+        <td style="padding:10px 16px; color:#64748b;">${new Date(a.created_at).toLocaleDateString('zh-TW')}</td>
+        <td style="padding:10px 16px; text-align:center;">
+          <button onclick="openEditAdminModal('${a.id}','${escHtml(a.email)}',${a.is_active})"
+            style="padding:4px 12px; border-radius:6px; border:1px solid #cbd5e1; background:#f8fafc;
+                   color:#475569; font-size:12px; cursor:pointer; margin-right:6px;">編輯</button>
+          ${a.is_active
+            ? `<button onclick="deactivateAdmin('${a.id}')"
+                style="padding:4px 12px; border-radius:6px; border:1px solid #fca5a5; background:#fff5f5;
+                       color:#ef4444; font-size:12px; cursor:pointer;">停用</button>`
+            : `<button onclick="reactivateAdmin('${a.id}')"
+                style="padding:4px 12px; border-radius:6px; border:1px solid #86efac; background:#f0fdf4;
+                       color:#16a34a; font-size:12px; cursor:pointer;">啟用</button>`
+          }
+        </td>`;
+      tbody.appendChild(tr);
+    });
+
+    document.getElementById('hr-admins-loading').style.display = 'none';
+    document.getElementById('hr-admins-table').style.display = 'table';
+  } catch (e) {
+    document.getElementById('hr-admins-loading').textContent = '載入失敗，請重新整理頁面';
+  }
+}
+
+function escHtml(s) {
+  return String(s).replace(/[&<>"']/g, c =>
+    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+// ── Modal：新增帳號 ──────────────────────────────────────────
+let _adminEditId = null;
+
+function openAddAdminModal() {
+  _adminEditId = null;
+  document.getElementById('admin-modal-title').textContent = '＋ 新增 HR 帳號';
+  document.getElementById('admin-modal-email').value = '';
+  document.getElementById('admin-modal-password').value = '';
+  document.getElementById('admin-modal-pwd-label').innerHTML = '密碼 <span style="color:#e74c3c;">*</span>';
+  document.getElementById('admin-modal-active-wrap').style.display = 'none';
+  document.getElementById('admin-modal-error').style.display = 'none';
+  document.getElementById('admin-modal-overlay').style.display = 'flex';
+}
+
+// ── Modal：編輯帳號 ──────────────────────────────────────────
+function openEditAdminModal(id, email, isActive) {
+  _adminEditId = id;
+  document.getElementById('admin-modal-title').textContent = '✏️ 編輯 HR 帳號';
+  document.getElementById('admin-modal-email').value = email;
+  document.getElementById('admin-modal-password').value = '';
+  document.getElementById('admin-modal-pwd-label').innerHTML = '新密碼（留空則不變更）';
+  document.getElementById('admin-modal-active').checked = isActive;
+  document.getElementById('admin-modal-active-wrap').style.display = 'block';
+  document.getElementById('admin-modal-error').style.display = 'none';
+  document.getElementById('admin-modal-overlay').style.display = 'flex';
+}
+
+function closeAdminModal() {
+  document.getElementById('admin-modal-overlay').style.display = 'none';
+}
+
+async function submitAdminModal() {
+  const email    = document.getElementById('admin-modal-email').value.trim();
+  const password = document.getElementById('admin-modal-password').value;
+  const errEl    = document.getElementById('admin-modal-error');
+  errEl.style.display = 'none';
+
+  if (!email) { errEl.textContent = '請填寫 Email'; errEl.style.display = 'block'; return; }
+
+  try {
+    let res;
+    if (_adminEditId === null) {
+      if (!password) { errEl.textContent = '新增帳號時密碼為必填'; errEl.style.display = 'block'; return; }
+      res = await fetch('/api/hr/admins', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+    } else {
+      const isActive = document.getElementById('admin-modal-active').checked;
+      const body = { email, is_active: isActive };
+      if (password) body.password = password;
+      res = await fetch(`/api/hr/admins/${_adminEditId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+    }
+
+    if (!res.ok) {
+      const d = await res.json().catch(() => ({}));
+      errEl.textContent = d.detail || '操作失敗，請重試';
+      errEl.style.display = 'block';
+      return;
+    }
+
+    closeAdminModal();
+    toast(_adminEditId ? '帳號已更新' : '帳號已新增', 'success');
+    loadHRAdmins();
+  } catch (e) {
+    errEl.textContent = '網路錯誤，請重試';
+    errEl.style.display = 'block';
+  }
+}
+
+// ── 停用 / 啟用帳號 ──────────────────────────────────────────
+async function deactivateAdmin(id) {
+  if (!confirm('確定要停用此帳號？')) return;
+  try {
+    const res = await fetch(`/api/hr/admins/${id}`, { method: 'DELETE' });
+    if (!res.ok) {
+      const d = await res.json().catch(() => ({}));
+      toast(d.detail || '停用失敗', 'error');
+      return;
+    }
+    toast('帳號已停用', 'success');
+    loadHRAdmins();
+  } catch { toast('網路錯誤', 'error'); }
+}
+
+async function reactivateAdmin(id) {
+  try {
+    const res = await fetch(`/api/hr/admins/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ is_active: true }),
+    });
+    if (!res.ok) { toast('啟用失敗', 'error'); return; }
+    toast('帳號已重新啟用', 'success');
+    loadHRAdmins();
+  } catch { toast('網路錯誤', 'error'); }
+}
+</script>
+</body>
+</html>

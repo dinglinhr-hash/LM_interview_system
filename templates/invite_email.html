@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <style>
+    body { 
+      font-family: 'Noto Sans TC', 'Helvetica Neue', Arial, sans-serif; 
+      background: #f8fafc; 
+      margin: 0; 
+      padding: 40px 20px; 
+    }
+    .card {
+      max-width: 600px; 
+      margin: auto; 
+      background: #fff;
+      border-radius: 12px; 
+      overflow: hidden;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+      border: 1px solid #eef2f6;
+    }
+    /* 仿官網深色高質感 Header */
+    .header {
+      background: #222222;
+      padding: 30px 35px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 3px solid #e8961a; 
+    }
+    .logo-text {
+      font-size: 14px;
+      font-weight: bold;
+      color: #ffffff;
+      letter-spacing: 1px;
+    }
+    .logo-text span {
+      color: #ffffff;
+      margin-left: 5px;
+    }
+    .greeting { 
+      padding: 35px 35px 10px; 
+      font-size: 14px; 
+      line-height: 1.6;
+      color: #334155; 
+    }
+    .greeting strong {
+      color: #1e293b;
+    }
+    .body { 
+      padding: 10px 35px 35px; 
+    }
+    
+    /* 仿官網「服務優勢」排版：精緻左側直條線與項目 */
+    .info-container {
+      border-left: 3px solid #d6a000;
+      padding-left: 20px;
+      margin: 25px 0;
+    }
+    .info-row {
+      margin-bottom: 20px; 
+      position: relative;
+    }
+    .info-row:last-child {
+      margin-bottom: 0;
+    }
+    /* 項目圓點裝飾 */
+    .info-row::before {
+      content: '●';
+      color: #e8961a;
+      font-size: 10px;
+      position: absolute;
+      left: -26px;
+      top: 4px;
+    }
+    .info-row .label { 
+      color: #64748b; 
+      font-size: 13px; 
+      font-weight: 500;
+      margin-bottom: 4px; 
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .info-row .content-text {
+      color: #1e293b;
+      font-size: 15px;
+      font-weight: 500;
+      line-height: 1.5;
+    }
+
+    .info-row .content-text ul {
+      margin: 0;
+      padding-left: 18px;
+    }
+
+    .badge {
+      display: inline-block;
+      margin-left: 6px;
+      background: #e2e8f0;
+      color: #334155;
+      font-size: 12px;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 10px;
+    }
+
+    .invite-text {
+      color: #475569;
+      font-size: 14px;
+      margin-bottom: 18px;
+      line-height: 1.5;
+    }
+
+    .divider {
+      border: none;
+      border-top: 2px solid #e2e8f0;
+      margin: 25px 0;
+    }
+
+    .btn {
+      display: block; 
+      text-align: center;
+      padding: 14px 24px;
+      background: linear-gradient(135deg, #e8961a, #cc7a00); 
+      color: white !important;
+      text-decoration: none; 
+      border-radius: 8px;
+      font-size: 15px; 
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      box-shadow: 0 4px 12px rgba(232, 150, 26, 0.25);
+      transition: all 0.2s ease;
+      margin-bottom: 12px;
+    }
+    .btn:hover {
+      background: linear-gradient(135deg, #f5a623, #e8961a);
+      box-shadow: 0 6px 16px rgba(232, 150, 26, 0.35);
+    }
+    .btn:last-of-type {
+      margin-bottom: 0;
+    }
+    .cancel-btn {
+      display: block;
+      text-align: center;
+      padding: 14px 24px;
+      background: #000000;
+      color: white !important;
+      text-decoration: none;
+      border-radius: 8px;
+      font-size: 15px;
+      font-weight: 600;
+      margin: 20px 0;
+    }
+    .cancel-btn:hover {
+      background: #920000;
+    }
+    .form-container {
+      margin-top: 24px;
+      background: #f8fafc;
+      padding: 18px;
+      border-radius: 12px;
+      border: 1px solid #e2e8f0;
+    }
+    .form-note {
+      font-size: 13px;
+      color: #64748b;
+      margin-bottom: 10px;
+    }
+    .footer {
+      background: #fafafa; 
+      padding: 20px 35px;
+      font-size: 13px; 
+      color: #94a3b8; 
+      text-align: center;
+      border-top: 1px solid #f1f5f9;
+      letter-spacing: 0.5px;
+    }
+  </style>
+</head>
+<body>
+<div class="card">
+
+  <!-- <div class="header">
+    <div class="logo-text"><span>股份有限公司</span></div>
+  </div> -->
+
+  <div class="greeting">
+    您好，<strong>{{applicant_name}}</strong>：<br>
+    誠摯邀請您參加本次的線上面試：
+  </div>
+
+  <div class="body">
+    <div class="info-container">
+
+      <div class="info-row">
+        <div class="label">面試時間</div>
+        <div class="content-text">{{slot_date}}<br>（{{start_time}} – {{end_time}}）</div>
+      </div>
+
+      {% if position_title %}
+      <div class="info-row">     
+        <div class="label">應徵職缺</div>          
+        <div class="content-text">{{position_title}}</div>
+      </div>
+      {% endif %}
+
+      <div class="info-row">     
+        <div class="label">其他事項</div>          
+        <div class="content-text">若要修改個人資訊(姓名/電話號碼/預約時段)，<br>請至本公司之面試預約平台選擇<b>「已有預約?」</b>進行修改。<br><br>有任何問題歡迎在104留下訊息，<br>或直接來電 0906-205-353，我們會儘速與您聯繫。</div>
+      </div>
+
+    </div>
+
+    <hr class="divider">
+    
+    <p class="invite-text">
+      請準時加入下方<br>Google Meet 會議室：
+    </p>
+    
+    {% if meet_link %}
+      <a href="{{meet_link}}" class="btn">加入會議</a>
+    {% else %}
+      <p style="color:#888; font-size:14px;">線上會議連結將於稍後提供。</p>
+    {% endif %}
+  
+    <a href="https://forms.gle/A7fKKkdnduCbm8aEA" class="cancel-btn">取消預約</a>
+  </div>
+
+</div>
+</body>
+</html>

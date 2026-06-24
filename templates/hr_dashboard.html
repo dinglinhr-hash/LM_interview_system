@@ -1,0 +1,1710 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HR 管理後台 — Interview Platform</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght=400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/style.css">
+  <style>
+    /* 核心佈局與移動 */
+    .page-header { display: none; }
+    .page { padding-top: 20px; }
+
+    /* --- 頁籤樣式 (Tabs) --- */
+    .admin-tabs {
+      display: flex;
+      gap: 4px;
+      margin-bottom: 24px;
+      background: #f4f6f9;
+      border-radius: 12px;
+      padding: 5px;
+    }
+    .tab-item {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      padding: 9px 18px;
+      cursor: pointer;
+      color: #8a96a3;
+      border-radius: 8px;
+      transition: all 0.22s ease;
+      font-weight: 500;
+      font-size: 14px;
+      user-select: none;
+      white-space: nowrap;
+    }
+    .tab-item:hover { color: #555; background: rgba(255,255,255,0.6); }
+    .tab-item .tab-icon { width: 16px; height: 16px; flex-shrink: 0; opacity: 0.6; transition: opacity 0.22s; }
+    .tab-item.active {
+      color: #333;
+      background: #fff;
+      box-shadow: 0 1px 6px rgba(0,0,0,0.08);
+    }
+    .tab-item.active .tab-icon { opacity: 1; color: #e8961a; }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; animation: fadeIn 0.3s; }
+
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+    /* --- 區塊樣式 --- */
+    .card { border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); border: 1px solid #f0f0f0; margin-bottom: 25px; overflow: hidden; }
+    .card-header {
+      background: #fafafa; padding: 18px 25px; display: flex; justify-content: space-between;
+      align-items: center; cursor: pointer; user-select: none;
+    }
+    .card-title { font-weight: 500; display: flex; align-items: center; gap: 10px; color: #333; }
+    .card-header::after { content: ''; width: 10px; height: 10px; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10' fill='none' stroke='%23ccc' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M2 3.5l3 3 3-3'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: center; transition: transform 0.3s; flex-shrink: 0; }
+    .collapsed .card-header::after { transform: rotate(-90deg); }
+    .collapsed .card-content { display: none; }
+
+    /* --- 🛠️ 精簡縮小版日曆組件 --- */
+    .calendar-wrapper {
+      max-width: 400px;
+      margin: 0 auto 15px auto;
+    }
+    .calendar-container {
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 12px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.02);
+    }
+    .calendar-nav {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+    .calendar-nav h3 { margin: 0; font-size: 15px; font-weight: 500; color: #333; }
+    .calendar-nav button {
+      background: #f1f5f9; border: none; width: 28px; height: 28px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center; color: #475569; transition: background 0.2s;
+    }
+    .calendar-nav button:hover { background: #e2e8f0; }
+
+    .calendar-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 4px;
+      text-align: center;
+    }
+    .calendar-weekday { font-size: 11px; font-weight: 500; color: #94a3b8; padding-bottom: 4px; }
+
+    .calendar-day {
+      aspect-ratio: 1.1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 13px;
+      position: relative;
+      color: #334155;
+      transition: all 0.2s;
+    }
+    .calendar-day:hover { background: #f1f5f9; }
+    .calendar-day.empty { cursor: default; background: none !important; }
+    .calendar-day.empty:hover { background: none; }
+    .calendar-day.selected { border: 2px solid #e8961a; font-weight: bold; background: #fffbeb; }
+
+    /* 狀態圓點 */
+    .calendar-day .status-dots {
+      display: flex;
+      gap: 3px;
+      position: absolute;
+      bottom: 3px;
+    }
+    .calendar-day .day-summary {
+      position: absolute;
+      top: 22px;
+      left: 6px;
+      right: 6px;
+      bottom: 18px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 2px;
+      font-size: 11px;
+      color: #475569;
+      text-align: left;
+    }
+    .calendar-day .day-summary div { width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .day-summary .free { color: #16a34a; }
+    .day-summary .booked { color: #dc2626; }
+    .dot { width: 5px; height: 5px; border-radius: 50%; display: inline-block; }
+    .dot-slot { background-color: #2ecc71; }
+    .dot-booked { background-color: #e74c3c; }
+
+    .calendar-legend {
+      display: flex;
+      gap: 12px;
+      font-size: 11px;
+      color: #64748b;
+      margin-top: 8px;
+      justify-content: center;
+    }
+    .legend-item { display: flex; align-items: center; gap: 4px; }
+
+    /* 日曆當天行程詳情預覽面板 */
+    .calendar-preview-panel {
+      background: #f8fafc;
+      border: 1px dashed #cbd5e1;
+      border-radius: 8px;
+      padding: 12px;
+      margin-top: 12px;
+    }
+    .calendar-preview-title {
+      font-size: 13px;
+      font-weight: 500;
+      color: #475569;
+      margin-bottom: 8px;
+      border-bottom: 1px solid #e2e8f0;
+      padding-bottom: 4px;
+    }
+    .preview-item-row {
+      font-size: 12px;
+      padding: 6px 0;
+      border-bottom: 1px solid #f1f5f9;
+    }
+    .preview-item-row:last-child { border-bottom: none; }
+    .preview-tag {
+      display: inline-block;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 500;
+      margin-right: 6px;
+    }
+    .tag-green { background: #dcfce7; color: #15803d; }
+    .tag-red { background: #fee2e2; color: #b91c1c; }
+
+    /* --- 🛠️ 大按鈕下拉選單小尺寸版 --- */
+    .visual-select-group {
+      display: flex;
+      flex-direction: row;
+      gap: 10px;
+      width: 100%;
+      max-width: 320px;
+    }
+    .visual-select-wrapper {
+      position: relative;
+      flex: 1;
+    }
+    select.visual-button-select {
+      width: 100% !important;
+      background: #fff !important;
+      border: 1.5px solid #e2e8f0 !important;
+      border-radius: 8px !important;
+      padding: 8px 24px 8px 12px !important;
+      font-size: 13px !important;
+      font-weight: 500 !important;
+      color: #333 !important;
+      text-align: left;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      appearance: none;
+      -webkit-appearance: none;
+      height: 36px !important;
+    }
+    select.visual-button-select:hover {
+      border-color: #e8961a !important;
+      background: #fffbf5 !important;
+    }
+    select.visual-button-select.has-value {
+      border-color: #e8961a !important;
+      background: #e8961a !important;
+      color: #fff !important;
+    }
+    select.visual-button-select option {
+      color: #333;
+      background: #fff;
+      font-size: 13px;
+    }
+    .visual-select-wrapper::after {
+      content: '';
+      width: 12px; height: 12px;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' fill='none' stroke='%23888' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M2 4l4 4 4-4'/%3E%3C/svg%3E");
+      background-repeat: no-repeat; background-position: center;
+      position: absolute;
+      right: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      pointer-events: none;
+    }
+    select.visual-button-select.has-value + ::after {
+      color: #fff;
+      opacity: 0.9;
+    }
+
+    .new-slot-grid {
+      display: grid;
+      grid-template-columns: 1.1fr 0.9fr;
+      gap: 22px;
+      align-items: start;
+    }
+
+    .new-slot-right {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .slot-control-card {
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 16px;
+      box-shadow: 0 6px 24px rgba(0,0,0,0.04);
+      padding: 22px;
+    }
+
+    .slot-control-card label {
+      display: block;
+      margin-bottom: 8px;
+      font-size: 14px;
+      color: #334155;
+      font-weight: 600;
+    }
+
+    .slot-control-row {
+      display: flex;
+      gap: 14px;
+      flex-wrap: wrap;
+    }
+
+    .slot-control-row > * {
+      flex: 1;
+    }
+
+    .slot-control-note {
+      padding: 16px 18px;
+      background: #fbfbfb;
+      border: 1px solid #e8eef6;
+      border-radius: 12px;
+      color: #5f6f86;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .slot-submit-wrap {
+      display: flex;
+      justify-content: flex-end;
+    }
+
+    .slot-submit-wrap button {
+      width: 100%;
+      max-width: 260px;
+    }
+
+    /* --- 其他基本樣式 --- */
+    .icon-btn {
+      border: none !important; outline: none !important; background: none;
+      padding: 6px; cursor: pointer; transition: all 0.2s;
+      color: #94a3b8; border-radius: 6px; display: inline-flex; align-items: center; justify-content: center;
+    }
+    .icon-btn:hover { background: #f1f5f9; color: #475569; }
+    .icon-btn--edit:hover { color: #3b82f6; background: #eff6ff; }
+    .icon-btn--delete:hover { color: #ef4444; background: #fff5f5; }
+    .icon-btn--eye:hover { color: #10b981; background: #f0fdf4; }
+    .icon-btn--eye.is-closed { color: #cbd5e1; }
+    .icon-btn--eye.is-closed:hover { color: #f59e0b; background: #fffbeb; }
+
+    .btn-primary { background: #e8961a; color: white; border: none; padding: 12px; border-radius: 8px; font-weight: 500; cursor: pointer; }
+    .btn-primary:hover { opacity: 0.9; }
+
+    /* --- 列表與編輯 --- */
+    .slot-item { padding: 15px 25px; border-bottom: 1px solid #f5f5f5; display: flex; justify-content: space-between; align-items: center; }
+    .slot-item:last-child { border-bottom: none; }
+    .edit-mode-container { background: #fff; padding: 20px; border-top: 1px solid #eee; }
+
+    input, select, textarea { border: 1px solid #ddd !important; border-radius: 6px !important; padding: 8px 12px !important; width: 100%; box-sizing: border-box; font-family: inherit; }
+    label { font-size: 13px; color: #666; margin-bottom: 4px; display: block; }
+    .note-text { font-size: 12px; color: #888; margin-top: 4px; display: block; }
+
+    .form-group { margin-bottom: 15px; }
+
+    /* ==========================================================================
+       ✨ 優化後：「時段限制管理」專屬樣式（與整體系統簡約風格完美一致）
+       ========================================================================== */
+    .tab-item-restriction.active {
+      color: #e8961a;
+      border-bottom-color: #e8961a;
+    }
+
+    .restriction-header-row {
+      display: flex;
+      justify-content: flex-end;
+      margin-bottom: 20px;
+    }
+
+    .btn-add-rule {
+      background-color: #e8961a;
+      color: #fff;
+      border: none;
+      padding: 10px 20px;
+      font-size: 14px;
+      font-weight: 500;
+      border-radius: 8px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      box-shadow: 0 4px 12px rgba(232, 150, 26, 0.15);
+      transition: all 0.2s ease;
+    }
+    .btn-add-rule:hover {
+      background-color: #d18210;
+      transform: translateY(-1px);
+    }
+
+    /* 調整為與面試/職缺管理一致的 Card 白底簡約容器 */
+    .rules-container {
+      background-color: #fff;
+      border: 1px solid #f0f0f0;
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+      min-height: 200px;
+      overflow: hidden;
+    }
+
+    /* 調整為與 .slot-item 一致的清單橫列樣式 */
+    .rule-item-box {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #ffffff;
+      padding: 18px 25px;
+      border-bottom: 1px solid #f5f5f5;
+      transition: background 0.2s ease;
+    }
+    .rule-item-box:last-child {
+      border-bottom: none;
+    }
+    .rule-item-box:hover {
+      background: #fcfcfc;
+    }
+
+    .rule-item-title {
+      font-size: 15px;
+      color: #333;
+      font-weight: 500;
+    }
+
+    .rule-item-actions {
+      display: flex;
+      gap: 12px;
+    }
+
+    /* Modal 燈箱核心優化（柔和模糊背景、優雅微圓角） */
+    .modal-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(15, 23, 42, 0.3);
+      backdrop-filter: blur(4px);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+      animation: fadeIn 0.2s ease-out;
+    }
+    .modal-overlay.show { display: flex; }
+
+    .modal-content-box {
+      background: #ffffff;
+      width: 100%;
+      max-width: 480px;
+      border-radius: 12px;
+      padding: 30px 25px;
+      box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04);
+      position: relative;
+    }
+
+    .modal-title-header {
+      font-size: 16px;
+      font-weight: 500;
+      color: #333;
+      margin-bottom: 20px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid #f0f0f0;
+    }
+
+    .position-config-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .position-label-text {
+      font-size: 14px;
+      color: #64748b;
+      white-space: nowrap;
+      min-width: 50px;
+    }
+
+    .position-select-menu {
+      flex: 1;
+    }
+    .position-select-menu select {
+      background: #fff !important;
+      border: 1px solid #e2e8f0 !important;
+      border-radius: 6px !important;
+      padding: 8px 12px !important;
+      font-size: 14px !important;
+      height: 38px !important;
+      transition: border-color 0.2s;
+    }
+    .position-select-menu select:focus {
+      border-color: #e8961a !important;
+    }
+
+    /* 精緻化的加減功能控制按鈕 */
+    .modal-config-btn {
+      width: 32px;
+      height: 32px;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: none;
+      cursor: pointer;
+      font-size: 16px;
+      transition: all 0.2s ease;
+    }
+    .modal-config-btn.add {
+      background: #fffbf5;
+      color: #e8961a;
+      border: 1px solid #fbeedb;
+    }
+    .modal-config-btn.add:hover {
+      background: #e8961a;
+      color: #fff;
+    }
+    .modal-config-btn.delete {
+      background: #fff5f5;
+      color: #ef4444;
+      border: 1px solid #fee2e2;
+    }
+    .modal-config-btn.delete:hover {
+      background: #ef4444;
+      color: #fff;
+    }
+
+    .modal-action-row {
+      display: flex;
+      justify-content: flex-end;
+      gap: 12px;
+      margin-top: 25px;
+      padding-top: 15px;
+      border-top: 1px solid #f0f0f0;
+    }
+
+    .btn-submit-rule {
+      background-color: #e8961a;
+      color: #fff;
+      border: none;
+      padding: 8px 24px;
+      font-size: 14px;
+      font-weight: 500;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .btn-submit-rule:hover { background-color: #d18210; }
+
+    .btn-cancel-rule {
+      background-color: #fff;
+      color: #64748b;
+      border: 1px solid #cbd5e1;
+      padding: 8px 24px;
+      font-size: 14px;
+      font-weight: 500;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-cancel-rule:hover {
+      background-color: #f8fafc;
+      color: #334155;
+    }
+
+    .modal-close-corner {
+      position: absolute;
+      top: 16px; right: 18px;
+      width: 28px; height: 28px;
+      display: flex; align-items: center; justify-content: center;
+      border-radius: 6px;
+      color: #94a3b8;
+      cursor: pointer;
+      transition: color 0.2s, background 0.2s;
+    }
+    .modal-close-corner:hover { color: #334155; background: #f1f5f9; }
+
+    /* ══════════════════════════════════════
+       Responsive Breakpoints
+    ══════════════════════════════════════ */
+
+    /* Nav override */
+    @media (max-width: 640px) {
+      nav { flex-wrap: wrap; gap: 6px; padding: 10px 14px; }
+      .nav-links { gap: 6px; flex-wrap: wrap; font-size: 13px; }
+      .nav-links a { padding: 4px 6px; }
+    }
+
+    /* Tablet */
+    @media (max-width: 900px) {
+      .one-col { max-width: 100% !important; padding: 0 4px; }
+      .new-slot-grid {
+        grid-template-columns: 1fr;
+        gap: 16px;
+      }
+      .calendar-wrapper { max-width: 100%; }
+      .slot-submit-wrap button { max-width: 100%; }
+    }
+
+    /* Mobile */
+    @media (max-width: 640px) {
+      .page { padding-top: 10px; }
+
+      /* Tabs: horizontally scrollable */
+      .admin-tabs {
+        gap: 2px;
+        padding: 4px;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        flex-wrap: nowrap;
+        border-radius: 10px;
+      }
+      .admin-tabs::-webkit-scrollbar { display: none; }
+      .tab-item {
+        flex: 0 0 auto;
+        padding: 8px 12px;
+        font-size: 13px;
+        gap: 5px;
+        white-space: nowrap;
+      }
+
+      /* Cards */
+      .card { border-radius: 10px; margin-bottom: 16px; }
+      .card-header { padding: 14px 16px; }
+      .slot-item { padding: 12px 16px; flex-wrap: wrap; gap: 8px; }
+      .slot-actions { flex-shrink: 0; }
+
+      /* New slot layout single col */
+      .new-slot-grid { gap: 12px; }
+      .slot-control-card { padding: 16px; }
+      .slot-control-row { gap: 10px; }
+      .slot-control-row > * { flex: 1 1 45%; }
+
+      /* Visual select group */
+      .visual-select-group { max-width: 100%; gap: 8px; }
+
+      /* Calendar */
+      .calendar-container { padding: 10px; }
+      .calendar-day { font-size: 12px; }
+      .calendar-nav h3 { font-size: 14px; }
+
+      /* Restriction modal */
+      .modal-content-box {
+        max-width: calc(100vw - 24px);
+        padding: 20px 16px;
+        border-radius: 10px;
+      }
+      .position-config-row { flex-wrap: wrap; gap: 8px; }
+      .position-select-menu { width: 100%; }
+
+      /* Position/company management */
+      .edit-mode-container { padding: 14px; }
+
+      /* Add position row */
+      #section-company .card-content > div:first-child,
+      .card .card-content > div[style*="display: flex"] {
+        flex-wrap: wrap;
+      }
+      #new-position, #new-position-company { width: 100% !important; }
+    }
+
+    /* Small phones */
+    @media (max-width: 380px) {
+      .tab-item { padding: 7px 10px; font-size: 12px; }
+      .calendar-day { font-size: 11px; }
+    }
+  </style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-logo">INTERVIEW <span>PLATFORM</span></div>
+  <div class="nav-links">
+    <a href="/">應徵者預約</a>
+    <a href="/hr" class="active">HR 後台</a>
+    <a href="/hr/bookings">查看預約</a>
+    <a href="#" id="logout-btn">登出</a>
+  </div>
+</nav>
+
+<div class="page">
+ <div class="page-title-row">
+    <div>
+      <br>
+    </div>
+  </div>
+
+  <div class="one-col" style="max-width: 850px; margin: 0 auto;">
+
+    <div class="admin-tabs">
+      <div class="tab-item active" onclick="switchTab('interview-tab', this)">
+        <svg class="tab-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="4" width="14" height="13" rx="2"/>
+          <path d="M3 8h14"/>
+          <path d="M7 2v4M13 2v4"/>
+          <path d="M7 12h6M7 15h4"/>
+        </svg>
+        面試管理
+      </div>
+      <div class="tab-item" onclick="switchTab('position-tab', this)">
+        <svg class="tab-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="2" y="6" width="16" height="11" rx="2"/>
+          <path d="M7 6V5a3 3 0 0 1 6 0v1"/>
+          <path d="M10 11v2M7 11h6"/>
+        </svg>
+        職缺管理
+      </div>
+      <div class="tab-item" onclick="switchTab('restriction-tab', this)">
+        <svg class="tab-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="10" cy="10" r="7.5"/>
+          <path d="M10 7v3.5l2.5 2.5"/>
+          <path d="M5.5 5.5l9 9" stroke-width="1.4" stroke-dasharray="2 1.5"/>
+        </svg>
+        時段限制管理
+      </div>
+      <div class="tab-item" onclick="window.location.href='/hr/account'">
+        <svg class="tab-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="10" cy="8" r="3.5"/>
+          <path d="M3 17c0-3.3 3.1-6 7-6s7 2.7 7 6"/>
+        </svg>
+        帳號設定
+      </div>
+    </div>
+
+    <!-- 面試管理分頁 -->
+    <div id="interview-tab" class="tab-content active">
+      <div class="card" id="section-slots">
+        <div class="card-header" onclick="toggleSection('section-slots')">
+          <div class="card-title">🕒 現有面試時段</div>
+        </div>
+        <div class="card-content">
+          <div id="slots-list" class="slot-list">載入中…</div>
+        </div>
+      </div>
+
+      <div class="card" id="section-add-slot">
+        <div class="card-header" onclick="toggleSection('section-add-slot')">
+          <div class="card-title">＋ 新增面試時段</div>
+        </div>
+        <div class="card-content" style="padding: 25px;">
+          <form id="slot-form">
+            <div class="new-slot-grid">
+              <div>
+                <div class="calendar-wrapper">
+                  <div class="calendar-container">
+                    <div class="calendar-nav">
+                      <button type="button" onclick="changeMonth(-1)" title="上個月">
+                        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 2L4 7l5 5"/></svg>
+                      </button>
+                      <h3 id="calendar-month-year">載入中...</h3>
+                      <button type="button" onclick="changeMonth(1)" title="下個月">
+                        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 2l5 5-5 5"/></svg>
+                      </button>
+                    </div>
+                    <div class="calendar-grid" id="calendar-grid"></div>
+                    <div class="calendar-legend">
+                      <div class="legend-item"><span class="dot dot-slot"></span> 空閒</div>
+                      <div class="legend-item"><span class="dot dot-booked"></span> 已預約</div>
+                    </div>
+                  </div>
+
+                  <div class="calendar-preview-panel" id="calendar-preview-panel">
+                    <div class="calendar-preview-title" id="preview-panel-title">當日排程詳情</div>
+                    <div id="preview-panel-content" style="color: #94a3b8; font-size: 12px; text-align: center; padding: 10px 0;">
+                      請點選上方日曆日期查看當天設定的職務與備註
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="new-slot-right">
+                <div class="slot-control-card">
+                  <div class="form-group">
+                    <label>面試日期</label>
+                    <input type="date" id="slot-date" required readonly style="background: #fafafa; cursor: pointer;">
+                  </div>
+
+                  <div class="form-group">
+                    <label>選擇時段</label>
+                    <div class="visual-select-group">
+                      <div class="visual-select-wrapper">
+                        <select id="select-am" class="visual-button-select" onchange="handleVisualSelect('AM')">
+                          <option value="" selected hidden>上午</option>
+                          <option value="09:00">09:00</option>
+                          <option value="09:30">09:30</option>
+                          <option value="10:00">10:00</option>
+                          <option value="10:30">10:30</option>
+                          <option value="11:00">11:00</option>
+                          <option value="11:30">11:30</option>
+                          <option value="12:00">12:00</option>
+                        </select>
+                      </div>
+                      <div class="visual-select-wrapper">
+                        <select id="select-pm" class="visual-button-select" onchange="handleVisualSelect('PM')">
+                          <option value="" selected hidden>下午</option>
+                          <option value="14:00">14:00</option>
+                          <option value="14:30">14:30</option>
+                          <option value="15:00">15:00</option>
+                          <option value="15:30">15:30</option>
+                          <option value="16:00">16:00</option>
+                          <option value="16:30">16:30</option>
+                          <option value="17:00">17:00</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="slot-control-row">
+                    <div class="form-group">
+                      <label>名額上限</label>
+                      <input type="number" id="capacity" value="1" min="1" required>
+                    </div>
+                    <div class="form-group">
+                      <label>面試時長</label>
+                      <select id="duration-select">
+                        <option value="30">30 分鐘</option>
+                        <option value="60" selected>1 小時</option>
+                        <option value="90">1.5 小時</option>
+                        <option value="120">2 小時</option>
+                      </select>
+                    </div>
+                  </div>
+                  <br>
+                  <div class="form-group">
+                    <label>備註（選填）</label>
+                    <textarea id="slot-notes" rows="4" placeholder="例如：僅限特定職缺預約，或面試官姓名"></textarea>
+                  </div>
+                  <div class="slot-submit-wrap" style="display:flex; justify-content:center;">
+                    <button type="submit" class="btn-primary" style="display:flex;align-items:center;gap:8px;">
+                      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3v10M3 8h10"/></svg>
+                      建立時段
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- 職缺管理分頁 -->
+    <div id="position-tab" class="tab-content">
+
+      <!-- 公司管理卡片 -->
+      <div class="card collapsed" id="section-company" style="margin-bottom: 16px;">
+        <div class="card-header" onclick="toggleSection('section-company')" style="cursor:pointer;">
+          公司管理
+        </div>
+        <div class="card-content" style="padding: 20px 25px;">
+          <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 14px;">
+            <input type="text" id="new-company-name" placeholder="輸入新公司名稱" style="flex: 1;">
+            <button class="btn-primary" id="add-company-btn" style="padding: 8px 16px; flex-shrink: 0; white-space: nowrap;">
+              + 新增公司
+            </button>
+          </div>
+          <div id="companies-list"></div>
+        </div>
+      </div>
+
+      <!-- 職缺管理卡片 -->
+      <div class="card">
+        <div class="card-content">
+          <div style="padding: 20px 25px; background: #fafafa; border-bottom: 1px solid #eee;">
+            <div style="display: flex; gap: 10px; align-items: center;">
+              <input type="text" id="new-position" placeholder="請輸入新職缺名稱" style="flex: 1;">
+              <select id="new-position-company" style="width: 200px; flex-shrink: 0; padding: 8px 12px; border: 1px solid #e9ecef; border-radius: 8px;">
+                <option value="">-- 選擇公司 --</option>
+              </select>
+              <button class="btn-primary" id="add-position-btn" style="padding: 8px 16px; display:flex; align-items:center; gap:7px; flex-shrink: 0; white-space: nowrap;">
+                <svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M7.5 2v11M2 7.5h11"/></svg>
+                新增職缺
+              </button>
+            </div>
+          </div>
+          <div id="positions-list"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 時段限制管理分頁 -->
+    <div id="restriction-tab" class="tab-content">
+      <div class="restriction-header-row">
+        <button class="btn-add-rule" onclick="openRestrictionModal()">
+          <svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M7.5 2v11M2 7.5h11"/></svg>
+          新增規則
+        </button>
+      </div>
+      <div class="rules-container" id="rules-list-wrapper">
+        <!-- 初始畫面與規則列表容器 -->
+      </div>
+    </div>
+
+
+
+  </div>
+</div>
+
+
+
+<!-- ==========================================================================
+     ✨ 優化後：「時段限制管理」Modal 燈箱設定介面（改為卡片微圓角與一致按紐）
+     ========================================================================== -->
+<div class="modal-overlay" id="restriction-modal">
+  <div class="modal-content-box">
+    <div class="modal-close-corner" onclick="closeRestrictionModal()" title="關閉">
+      <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 4l10 10M14 4L4 14"/></svg>
+    </div>
+    <div class="modal-title-header" id="modal-title-text">設定時段限制規則</div>
+
+    <form id="rule-config-form" onsubmit="handleRuleSubmit(event)">
+      <!-- 隱藏欄位用以判別是編輯還是新增 -->
+      <input type="hidden" id="modal-rule-id" value="">
+
+      <!-- 職務設定動態列表容器 -->
+      <div id="modal-positions-container">
+        <!-- 預設生成職務欄位 -->
+      </div>
+
+      <div class="modal-action-row">
+        <button type="button" class="btn-cancel-rule" onclick="closeRestrictionModal()">取消</button>
+        <button type="submit" class="btn-submit-rule" id="modal-submit-btn">啟用規則</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+const toast = (msg, type='success') => {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = `show ${type}`;
+  setTimeout(() => el.className = '', 2800);
+};
+
+function switchTab(tabId, el) {
+  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+  document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
+  document.getElementById(tabId).classList.add('active');
+  el.classList.add('active');
+}
+
+function toggleSection(id) { document.getElementById(id).classList.toggle('collapsed'); }
+
+function handleVisualSelect(type) {
+  const amSelect = document.getElementById('select-am');
+  const pmSelect = document.getElementById('select-pm');
+
+  if (type === 'AM' && amSelect.value !== '') {
+    pmSelect.value = '';
+    pmSelect.classList.remove('has-value');
+    amSelect.classList.add('has-value');
+  } else if (type === 'PM' && pmSelect.value !== '') {
+    amSelect.value = '';
+    amSelect.classList.remove('has-value');
+    pmSelect.classList.add('has-value');
+  } else {
+    if (type === 'AM') amSelect.classList.remove('has-value');
+    if (type === 'PM') pmSelect.classList.remove('has-value');
+  }
+}
+
+function generateTimeOptions(selectedValue, minTime = null, period = 'AM') {
+  let options = '';
+  const startHour = (period === 'AM') ? 9 : 14;
+  const endHour = (period === 'AM') ? 12 : 17;
+
+  for (let h = startHour; h <= endHour; h++) {
+    ['00', '30'].forEach(mm => {
+      if (h === endHour && mm === '30') return;
+      const time = `${h.toString().padStart(2, '0')}:${mm}`;
+      if (minTime && time <= minTime) return;
+      options += `<option value="${time}" ${time === selectedValue ? 'selected' : ''}>${time}</option>`;
+    });
+  }
+  return options;
+}
+
+// --- 日曆渲染與行程預覽看板邏輯 ---
+const today = new Date();
+let currentCalDate = new Date(today.getFullYear(), today.getMonth(), 1);
+let selectedDateStr = `${today.getFullYear()}-${(today.getMonth() + 1).toString().padStart(2, '0')}-${today.getDate().toString().padStart(2, '0')}`;
+
+let slotDatesSet = new Set();
+let bookedDatesSet = new Set();
+let bookingsByDate = {};
+
+function changeMonth(dir) {
+  currentCalDate.setMonth(currentCalDate.getMonth() + dir);
+  renderCalendar();
+}
+
+function selectCalendarDay(dateStr) {
+  selectedDateStr = dateStr;
+  document.getElementById('slot-date').value = dateStr;
+  renderCalendar();
+  updatePreviewPanel(dateStr);
+  startPreviewAutoRefresh();
+}
+
+function updatePreviewPanel(dateStr) {
+  document.getElementById('preview-panel-title').textContent = `${dateStr}`;
+  const contentEl = document.getElementById('preview-panel-content');
+
+  // 【修正】直接從 bookingsByDate 取資料（已由 fetchCalendarStatus 透過 /api/slots/bookings-by-date 填充）。
+  // 原本對每個 InterviewSlot 打 /api/slots/{id}/bookings，只能查到以 slot_id 關聯的預約，
+  // HR 在「所有預約紀錄」改過時間後 slot_id 可能變 null，導致預覽永遠顯示舊資料。
+  const dayEntries = bookingsByDate[dateStr] || [];
+  const daySlots = allSlots.filter(s => s.slot_date === dateStr);
+
+  if (dayEntries.length === 0 && daySlots.length === 0) {
+    contentEl.innerHTML = "無面試行程設定。";
+    return;
+  }
+
+  // 合併：以 bookingsByDate 為主（包含 HR 改過時間的預約），再補上純空閒 slot
+  const rows = dayEntries.length > 0 ? dayEntries : daySlots.map(s => ({
+    time: `${s.start_time.substring(0,5)}-${s.end_time.substring(0,5)}`,
+    applicant_name: '',
+    position_title: '空閒',
+  }));
+
+  contentEl.innerHTML = rows.map(entry => {
+    const isBooked = !!entry.applicant_name;
+    const badgeClass = isBooked ? 'tag-red' : 'tag-green';
+    const badgeText = isBooked ? '已預約' : '空閒中';
+
+    const bookingLine = isBooked
+      ? `<div style="margin-top: 4px; font-size: 11px; color: #475569; border-left: 2px solid #cbd5e1; padding-left: 6px;">
+           <div style="padding: 2px 0;">👤 ${entry.applicant_name} - ${entry.position_title}</div>
+         </div>`
+      : '';
+
+    return `
+      <div class="preview-item-row" style="text-align: left;">
+        <span class="preview-tag ${badgeClass}">${badgeText}</span>
+        <strong>${entry.time}</strong>
+        ${bookingLine}
+      </div>
+    `;
+  }).join('');
+}
+
+async function fetchCalendarStatus() {
+  try {
+    slotDatesSet.clear();
+    bookedDatesSet.clear();
+    bookingsByDate = {};
+
+    // 【修正】改用 /api/slots/bookings-by-date，直接以 booking.slot_date 為基準。
+    // 原本用 allSlots 過濾再逐一查 /api/slots/{id}/bookings，
+    // 導致 HR 在「所有預約紀錄」修改了面試時間後，日曆仍顯示舊時段（InterviewSlot 的日期）。
+    const res = await fetch('/api/slots/bookings-by-date');
+    if (!res.ok) throw new Error('bookings-by-date 載入失敗');
+    bookingsByDate = await res.json();
+
+    // 同步 slotDatesSet（有 InterviewSlot 設定的日期，顯示藍點）
+    allSlots.forEach(s => {
+      if (s.slot_date) slotDatesSet.add(s.slot_date);
+    });
+
+    // 同步 bookedDatesSet（有真實預約的日期，顯示橘點）
+    Object.keys(bookingsByDate).forEach(d => {
+      if (bookingsByDate[d] && bookingsByDate[d].length > 0) {
+        bookedDatesSet.add(d);
+      }
+    });
+
+    // 補上空閒時段（有 slot 但當天沒有任何預約）
+    allSlots.forEach(s => {
+      if (!s.slot_date || s.status === 'cancelled') return;
+      if (s.booked_count === 0) {
+        if (!bookingsByDate[s.slot_date]) bookingsByDate[s.slot_date] = [];
+        const slotTime = `${s.start_time.substring(0,5)}-${s.end_time.substring(0,5)}`;
+        const alreadyHas = bookingsByDate[s.slot_date].some(
+          x => x.time === slotTime && x.position_title === '空閒'
+        );
+        if (!alreadyHas) {
+          bookingsByDate[s.slot_date].push({
+            time: slotTime,
+            position_title: '空閒',
+            applicant_name: ''
+          });
+        }
+      }
+    });
+
+    Object.keys(bookingsByDate).forEach(d => {
+      bookingsByDate[d].sort((a,b) => {
+        const aBooked = !!a.applicant_name;
+        const bBooked = !!b.applicant_name;
+        if (aBooked && !bBooked) return -1;
+        if (!aBooked && bBooked) return 1;
+        return a.time.localeCompare(b.time);
+      });
+    });
+  } catch (e) {
+    console.error("無法同步狀態標籤", e);
+  }
+}
+
+function renderCalendar() {
+  const grid = document.getElementById('calendar-grid');
+  const monthYearLabel = document.getElementById('calendar-month-year');
+
+  const year = currentCalDate.getFullYear();
+  const month = currentCalDate.getMonth();
+
+  monthYearLabel.textContent = `${year} 年 ${month + 1} 月`;
+  grid.innerHTML = "";
+
+  const weekdays = ['日', '一', '二', '三', '四', '五', '六'];
+  weekdays.forEach(w => {
+    const el = document.createElement('div');
+    el.className = 'calendar-weekday';
+    el.textContent = w;
+    grid.appendChild(el);
+  });
+
+  const firstDayIndex = new Date(year, month, 1).getDay();
+  const totalDays = new Date(year, month + 1, 0).getDate();
+
+  for (let i = 0; i < firstDayIndex; i++) {
+    const emptyCell = document.createElement('div');
+    emptyCell.className = 'calendar-day empty';
+    grid.appendChild(emptyCell);
+  }
+
+  for (let day = 1; day <= totalDays; day++) {
+    const dayBtn = document.createElement('div');
+    dayBtn.className = 'calendar-day';
+    dayBtn.textContent = day;
+
+    const currDateStr = `${year}-${(month + 1).toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
+
+    if (currDateStr === selectedDateStr) {
+      dayBtn.classList.add('selected');
+    }
+
+    const dotsContainer = document.createElement('div');
+    dotsContainer.className = 'status-dots';
+
+    if (slotDatesSet.has(currDateStr)) {
+      const dot = document.createElement('span');
+      dot.className = 'dot dot-slot';
+      dotsContainer.appendChild(dot);
+    }
+
+    if (bookedDatesSet.has(currDateStr)) {
+      const dot = document.createElement('span');
+      dot.className = 'dot dot-booked';
+      dotsContainer.appendChild(dot);
+    }
+
+    if (bookingsByDate[currDateStr] && bookingsByDate[currDateStr].length > 0) {
+      const listEl = document.createElement('div');
+      listEl.className = 'day-summary';
+      const items = bookingsByDate[currDateStr];
+      const maxShow = 3;
+      items.slice(0, maxShow).forEach(it => {
+        const itEl = document.createElement('div');
+        itEl.textContent = `${it.time} ${it.position_title}`;
+        itEl.className = it.applicant_name ? 'booked' : 'free';
+        listEl.appendChild(itEl);
+      });
+      if (items.length > maxShow) {
+        const moreEl = document.createElement('div');
+        moreEl.textContent = `+${items.length - maxShow}...`;
+        moreEl.style.color = '#94a3b8';
+        listEl.appendChild(moreEl);
+      }
+      dayBtn.appendChild(listEl);
+    }
+
+    dayBtn.appendChild(dotsContainer);
+    dayBtn.onclick = () => selectCalendarDay(currDateStr);
+    grid.appendChild(dayBtn);
+  }
+}
+
+// --- 公司管理 ---
+let globalCompaniesCached = [];
+
+async function loadCompanies() {
+  const res = await fetch('/api/companies');
+  globalCompaniesCached = await res.json();
+  renderCompaniesList();
+  loadCompanyOptions();
+}
+
+function renderCompaniesList() {
+  const list = document.getElementById('companies-list');
+  if (!list) return;
+  if (!globalCompaniesCached.length) {
+    list.innerHTML = '<p style="color:#999; font-size:13px; padding:8px 0;">尚未新增任何公司</p>';
+    return;
+  }
+  list.innerHTML = globalCompaniesCached.map(c => `
+    <div class="slot-item">
+      <div style="flex:1"><strong>${c.name}</strong></div>
+      <div class="slot-actions">
+        <button class="icon-btn icon-btn--delete" onclick="deleteCompany('${c.id}','${c.name.replace(/'/g,"\'")}')" title="刪除">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 4h12M5 4V3a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v1M6 7v5M10 7v5M3 4l1 9a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1l1-9"/></svg>
+        </button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function loadCompanyOptions() {
+  const sel = document.getElementById('new-position-company');
+  if (!sel) return;
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">-- 選擇公司 --</option>' +
+    globalCompaniesCached.map(c => `<option value="${c.name}">${c.name}</option>`).join('');
+  sel.value = cur;
+}
+
+function buildCompanyOptions(selectedName) {
+  return '<option value="">-- 選擇公司 --</option>' +
+    globalCompaniesCached.map(c =>
+      `<option value="${c.name}" ${c.name === selectedName ? 'selected' : ''}>${c.name}</option>`
+    ).join('');
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  const addCompanyBtn = document.getElementById('add-company-btn');
+  if (addCompanyBtn) {
+    addCompanyBtn.onclick = async () => {
+      const name = document.getElementById('new-company-name').value.trim();
+      if (!name) return;
+      const res = await fetch('/api/companies', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ name })
+      });
+      if (res.ok) {
+        document.getElementById('new-company-name').value = '';
+        toast('公司已新增', 'success');
+        await loadCompanies();
+      } else {
+        const d = await res.json();
+        toast(d.detail || '新增失敗', 'error');
+      }
+    };
+  }
+});
+
+async function deleteCompany(id, name) {
+  if (!confirm(`確定刪除「${name}」？
+（已使用此公司的職缺不受影響）`)) return;
+  const res = await fetch(`/api/companies/${id}`, { method: 'DELETE' });
+  if (res.ok) {
+    toast('公司已刪除', 'success');
+    await loadCompanies();
+  } else {
+    toast('刪除失敗', 'error');
+  }
+}
+
+
+// --- 職缺管理 ---
+let editingPosId = null;
+let globalPositionsCached = [];
+
+async function loadPositions() {
+  const res = await fetch('/api/positions?active_only=false');
+  const pos = await res.json();
+  globalPositionsCached = pos;
+  document.getElementById('positions-list').innerHTML = pos.map(p => {
+    if (editingPosId === p.id) {
+      return `
+        <div class="edit-mode-container">
+          <label>修改名稱</label>
+          <input type="text" id="edit-pos-title-${p.id}" value="${p.title}" style="margin-bottom:10px">
+          <label>公司</label>
+          <select id="edit-pos-company-${p.id}" style="margin-bottom:10px; padding: 8px 12px; border: 1px solid #e9ecef; border-radius: 8px;">
+            ${buildCompanyOptions(p.company)}
+          </select>
+          <div style="display:flex; gap:10px">
+            <button class="btn-primary" style="padding:5px 15px" onclick="savePos('${p.id}')">儲存</button>
+            <button class="icon-btn" onclick="editingPosId=null;loadPositions()">取消</button>
+          </div>
+        </div>`;
+    }
+    const companyDisplay = p.company ? `<br><small style="color:#666;">${p.company}</small>` : '';
+    return `
+      <div class="slot-item">
+        <div style="flex:1"><strong>${p.title}</strong><br><small style="color:#999">${p.is_active ? '● 公開中' : '○ 已隱藏'}</small>${companyDisplay}</div>
+        <div class="slot-actions">
+          <button class="icon-btn icon-btn--eye ${p.is_active ? '' : 'is-closed'}" onclick="togglePosVisibility('${p.id}')" title="${p.is_active ? '點擊隱藏' : '已隱藏，點擊開放'}">
+            ${p.is_active
+              ? `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 8c0 0 2-4 6-4s6 4 6 4-2 4-6 4-6-4-6-4z"/><circle cx="8" cy="8" r="2"/></svg>`
+              : `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 2l12 12"/><path d="M6.7 6.8A2 2 0 0 0 9.2 9.3"/><path d="M4.2 4.3C2.9 5.2 2 6.5 2 8c0 0 2 4 6 4a6 6 0 0 0 2.8-.8"/><path d="M9.5 3.6A5.6 5.6 0 0 1 14 8c0 0-.8 2-2.5 3"/></svg>`
+            }
+          </button>
+          <button class="icon-btn icon-btn--edit" onclick="editingPosId='${p.id}';loadPositions()" title="編輯">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 2.5a1.5 1.5 0 0 1 2.12 2.12L5 13H3v-2L11 2.5z"/></svg>
+          </button>
+          <button class="icon-btn icon-btn--delete" onclick="deletePos('${p.id}')" title="刪除">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 4h12M5 4V3a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v1M6 7v5M10 7v5M3 4l1 9a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1l1-9"/></svg>
+          </button>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+async function savePos(id) {
+  const title = document.getElementById(`edit-pos-title-${id}`).value;
+  const company = document.getElementById(`edit-pos-company-${id}`).value;
+  await fetch(`/api/positions/${id}`, { method:'PATCH', headers:{'Content-Type':'application/json'}, body:JSON.stringify({title, company})});
+  editingPosId = null; loadPositions();
+}
+
+async function togglePosVisibility(id) {
+  await fetch(`/api/positions/${id}/visibility`, { method:'PATCH' });
+  loadPositions();
+}
+
+async function deletePos(id) {
+  if (!confirm('確定刪除此職缺？')) return;
+  const res = await fetch(`/api/positions/${id}`, { method:'DELETE' });
+  let data = null;
+  try { data = await res.json(); } catch (e) { }
+  if (res.ok) {
+    toast((data && data.message) || '職缺已刪除', 'success');
+    loadPositions();
+  } else {
+    const errMsg = data && (data.detail || data.message) ? (data.detail || data.message) : '刪除失敗，請稍後重試';
+    toast(errMsg, 'error');
+  }
+}
+
+document.getElementById('add-position-btn').onclick = async () => {
+  const title = document.getElementById('new-position').value;
+  const company = document.getElementById('new-position-company').value;
+  if(!title) return;
+  await fetch('/api/positions', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({title, company})});
+  document.getElementById('new-position').value = '';
+  document.getElementById('new-position-company').value = '';
+  loadPositions();
+};
+
+// --- 面試時段管理 ---
+let allSlots = [];
+let editingSlotId = null;
+
+async function loadSlots() {
+  const res = await fetch('/api/slots');
+  allSlots = await res.json();
+  renderSlots();
+
+  await fetchCalendarStatus();
+  renderCalendar();
+  if (selectedDateStr) {
+    document.getElementById('slot-date').value = selectedDateStr;
+    updatePreviewPanel(selectedDateStr);
+  }
+}
+
+function renderSlots() {
+  const el = document.getElementById('slots-list');
+  el.innerHTML = allSlots.length ? allSlots.map(renderSlotItem).join('') : '<div class="empty">尚無時段</div>';
+}
+
+function renderSlotItem(slot) {
+  if (editingSlotId === slot.id) {
+    const period = parseInt(slot.start_time) < 13 ? 'AM' : 'PM';
+    return `
+      <div class="edit-mode-container">
+        <div style="display:flex; gap:15px; margin-bottom:10px">
+          <div style="flex:1"><label>日期</label><input id="edit-date-${slot.id}" type="date" value="${slot.slot_date}"></div>
+          <div style="flex:1"><label>開始</label><select id="edit-start-${slot.id}" onchange="updateEditEnd('${slot.id}', '${period}')">${generateTimeOptions(slot.start_time.substring(0,5), null, period)}</select></div>
+          <div style="flex:1"><label>結束</label><select id="edit-end-${slot.id}">${generateTimeOptions(slot.end_time.substring(0,5), slot.start_time.substring(0,5), period)}</select></div>
+        </div>
+        <div style="display:flex; gap:15px; margin-bottom:10px">
+            <div style="flex:1"><label>名額</label><input id="edit-capacity-${slot.id}" type="number" value="${slot.max_capacity || 1}" min="1"></div>
+        </div>
+        <div style="margin-bottom:15px"><label>備註</label><textarea id="edit-notes-${slot.id}" rows="2">${slot.notes || ''}</textarea></div>
+        <div style="display:flex; gap:10px">
+          <button class="btn-primary" style="padding:5px 15px" onclick="saveSlot('${slot.id}')">更新時段</button>
+          <button class="icon-btn" onclick="editingSlotId=null;renderSlots()">取消</button>
+        </div>
+      </div>`;
+  }
+
+  const isClosed = slot.status === 'closed';
+  return `
+    <div class="slot-item">
+      <div style="flex:1">
+        <strong>${slot.slot_date}</strong><br>
+        <span style="color:#666">${slot.start_time.substring(0,5)} - ${slot.end_time.substring(0,5)}</span>
+        <small style="color:#e8961a; margin-left:10px">目前名額: ${slot.max_capacity || 1} (已預約: ${slot.booked_count || 0})</small>
+        <span class="badge ${isClosed ? 'badge-closed' : 'badge-open'}" style="margin-left:8px; font-size:10px">${slot.status.toUpperCase()}</span>
+        ${slot.notes ? `<span class="note-text">💬 ${slot.notes}</span>` : ''}
+      </div>
+      <div class="slot-actions">
+        <button class="icon-btn icon-btn--eye ${isClosed ? 'is-closed' : ''}" onclick="toggleVisibility('${slot.id}')" title="${isClosed ? '已隱藏，點擊開放' : '點擊隱藏'}">
+          ${isClosed
+            ? `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 2l12 12"/><path d="M6.7 6.8A2 2 0 0 0 9.2 9.3"/><path d="M4.2 4.3C2.9 5.2 2 6.5 2 8c0 0 2 4 6 4a6 6 0 0 0 2.8-.8"/><path d="M9.5 3.6A5.6 5.6 0 0 1 14 8c0 0-.8 2-2.5 3"/></svg>`
+            : `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="8" cy="8" rx="6" ry="3.5" transform="rotate(-15 8 8)" style="display:none"/><path d="M2 8c0 0 2-4 6-4s6 4 6 4-2 4-6 4-6-4-6-4z"/><circle cx="8" cy="8" r="2"/></svg>`
+          }
+        </button>
+        <button class="icon-btn icon-btn--edit" onclick="editingSlotId='${slot.id}';renderSlots()" title="編輯">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 2.5a1.5 1.5 0 0 1 2.12 2.12L5 13H3v-2L11 2.5z"/></svg>
+        </button>
+        <button class="icon-btn icon-btn--delete" onclick="deleteSlot('${slot.id}')" title="刪除">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 4h12M5 4V3a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v1M6 7v5M10 7v5M3 4l1 9a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1l1-9"/></svg>
+        </button>
+      </div>
+    </div>`;
+}
+
+async function saveSlot(id) {
+  const payload = {
+    slot_date: document.getElementById(`edit-date-${id}`).value,
+    start_time: document.getElementById(`edit-start-${id}`).value,
+    end_time: document.getElementById(`edit-end-${id}`).value,
+    max_capacity: document.getElementById(`edit-capacity-${id}`).value,
+    notes: document.getElementById(`edit-notes-${id}`).value
+  };
+  await fetch(`/api/slots/${id}`, { method:'PATCH', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)});
+  editingSlotId = null; loadSlots();
+}
+
+function updateEditEnd(id, period) {
+  const start = document.getElementById(`edit-start-${id}`).value;
+  document.getElementById(`edit-end-${id}`).innerHTML = generateTimeOptions('', start, period);
+}
+
+async function toggleVisibility(id) {
+  const slot = allSlots.find(s => s.id === id);
+  await fetch(`/api/slots/${id}`, { method:'PATCH', headers:{'Content-Type':'application/json'}, body:JSON.stringify({status: slot.status === 'closed' ? 'open' : 'closed'})});
+  loadSlots();
+}
+
+async function deleteSlot(id) {
+  await fetch(`/api/slots/${id}`, {method:'DELETE'});
+  loadSlots();
+}
+
+document.getElementById('slot-form').onsubmit = async (e) => {
+  e.preventDefault();
+
+  const dateValue = document.getElementById('slot-date').value;
+  if (!dateValue) {
+    alert('請先在上方日曆上點選一個面試日期！');
+    return;
+  }
+
+  const amValue = document.getElementById('select-am').value;
+  const pmValue = document.getElementById('select-pm').value;
+
+  if (!amValue && !pmValue) {
+    alert('請從上午或下午按鈕中選擇一個時間點！');
+    return;
+  }
+
+  const startTime = amValue || pmValue;
+  const durationMinutes = parseInt(document.getElementById('duration-select').value);
+
+  const [hours, minutes] = startTime.split(':').map(Number);
+  const dateObj = new Date();
+  dateObj.setHours(hours);
+  dateObj.setMinutes(minutes + durationMinutes);
+
+  const endHH = dateObj.getHours().toString().padStart(2, '0');
+  const endMM = dateObj.getMinutes().toString().padStart(2, '0');
+  const calculatedEnd = `${endHH}:${endMM}`;
+
+  const payload = {
+    slot_date: dateValue,
+    start_time: startTime,
+    end_time: calculatedEnd,
+    max_capacity: document.getElementById('capacity').value,
+    notes: document.getElementById('slot-notes').value
+  };
+
+  await fetch('/api/slots', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)});
+
+  document.getElementById('select-am').value = '';
+  document.getElementById('select-pm').value = '';
+  document.getElementById('select-am').classList.remove('has-value');
+  document.getElementById('select-pm').classList.remove('has-value');
+  document.getElementById('slot-notes').value = '';
+  const freshToday = new Date();
+  selectedDateStr = `${freshToday.getFullYear()}-${(freshToday.getMonth() + 1).toString().padStart(2, '0')}-${freshToday.getDate().toString().padStart(2, '0')}`;
+  document.getElementById('slot-date').value = selectedDateStr;
+  loadSlots();
+};
+
+let previewRefreshInterval = null;
+
+function startPreviewAutoRefresh() {
+  if (previewRefreshInterval) clearInterval(previewRefreshInterval);
+  if (!selectedDateStr) return;
+
+  previewRefreshInterval = setInterval(() => {
+    if (selectedDateStr) {
+      updatePreviewPanel(selectedDateStr);
+    }
+  }, 5000);
+}
+
+// ==========================================================================
+// ✨ 時段限制管理（後端 API：職務專屬鎖定 / 職務群組共用鎖定）
+// ==========================================================================
+
+let restrictionRulesCache = [];
+
+async function fetchRestrictionRules() {
+  try {
+    const res = await fetch('/api/restriction-rules', { credentials: 'same-origin' });
+    if (!res.ok) throw new Error('載入失敗');
+    restrictionRulesCache = await res.json();
+  } catch (e) {
+    console.error(e);
+    restrictionRulesCache = [];
+    toast('無法載入時段限制規則', 'error');
+  }
+}
+
+function renderRestrictionRulesList() {
+  const rules = restrictionRulesCache;
+  const wrapper = document.getElementById('rules-list-wrapper');
+
+  if (rules.length === 0) {
+    wrapper.innerHTML = '<div style="text-align:center; color:#999; padding: 40px 0;">目前無設定任何時段限制規則。<br><small style="color:#bbb;">單一職務＝專屬鎖定；多職務＝群組共用鎖定</small></div>';
+    return;
+  }
+
+  wrapper.innerHTML = rules.map(rule => `
+    <div class="rule-item-box">
+      <div class="rule-item-title">${rule.display_label}</div>
+      <div class="rule-item-actions">
+        <button class="icon-btn" onclick="deleteRestrictionRule('${rule.id}')" title="刪除規則">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M2 4h12M5 4V3a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v1M6 7v5M10 7v5M3 4l1 9a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1l1-9"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+  `).join('');
+}
+
+// 開啟燈箱彈跳視窗（支援新版大圓角與排版切換）
+function openRestrictionModal(ruleId = '') {
+  const modal = document.getElementById('restriction-modal');
+  const form = document.getElementById('rule-config-form');
+  const idInput = document.getElementById('modal-rule-id');
+  const submitBtn = document.getElementById('modal-submit-btn');
+  const titleText = document.getElementById('modal-title-text');
+
+  form.reset();
+  idInput.value = ruleId;
+
+  let targetPositions = [];
+
+  if (ruleId) {
+    titleText.textContent = '編輯時段限制規則';
+    submitBtn.textContent = '更新儲存';
+    const currentRule = restrictionRulesCache.find(r => r.id === ruleId);
+    if (currentRule) {
+      targetPositions = currentRule.positions.map(p => ({ position_id: p.position_id }));
+    }
+  } else {
+    titleText.textContent = '新增時段限制規則';
+    submitBtn.textContent = '建立啟用';
+    targetPositions = [{ position_id: '' }];
+  }
+
+  renderModalPositionRows(targetPositions);
+  modal.classList.add('show');
+}
+
+function closeRestrictionModal() {
+  document.getElementById('restriction-modal').classList.remove('show');
+}
+
+// 動態渲染內嵌精緻功能按鈕的列項目
+function renderModalPositionRows(positionsArray) {
+  const container = document.getElementById('modal-positions-container');
+  container.innerHTML = '';
+
+  positionsArray.forEach((pos, index) => {
+    const row = document.createElement('div');
+    row.className = 'position-config-row';
+    row.setAttribute('data-index', index);
+
+    let selectOptions = '<option value="">請選擇職務</option>';
+    const selectable = globalPositionsCached.filter(p => p.is_active);
+    const optionIds = new Set(selectable.map(p => p.id));
+
+    if (pos.position_id && !optionIds.has(pos.position_id)) {
+      const legacy = globalPositionsCached.find(p => p.id === pos.position_id);
+      if (legacy) selectable.unshift(legacy);
+    }
+
+    selectable.forEach(p => {
+      const selectedStr = (pos.position_id === p.id) ? 'selected' : '';
+      selectOptions += `<option value="${p.id}" ${selectedStr}>${p.title}</option>`;
+    });
+
+    row.innerHTML = `
+      <span class="position-label-text">職務 ${index + 1}</span>
+      <div class="position-select-menu">
+        <select class="pos-title-select" required>
+          ${selectOptions}
+        </select>
+      </div>
+      <button type="button" class="modal-config-btn add text-action-btn add-btn" style="display:none;" title="增加職務欄位">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M7 2v10M2 7h10"/></svg>
+      </button>
+      <button type="button" class="modal-config-btn delete delete-row-btn" title="移除此列" onclick="handleDeleteRow(this)">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M2 7h10"/></svg>
+      </button>
+    `;
+
+    container.appendChild(row);
+  });
+
+  updateModalButtonsState();
+}
+function handleDynamicButtonClick(btnEl, index) {
+  const container = document.getElementById('modal-positions-container');
+  const rows = container.querySelectorAll('.position-config-row');
+
+  let currentPositions = [];
+  rows.forEach(r => {
+    currentPositions.push({ position_id: r.querySelector('.pos-title-select').value });
+  });
+
+  currentPositions.splice(index + 1, 0, { position_id: '' });
+  renderModalPositionRows(currentPositions);
+}
+
+function updateModalButtonsState() {
+  const container = document.getElementById('modal-positions-container');
+  const rows = container.querySelectorAll('.position-config-row');
+
+  rows.forEach((row, idx) => {
+    const addBtn = row.querySelector('.add-btn');
+    if (addBtn) {
+      if (idx === rows.length - 1) {
+        addBtn.style.display = 'inline-flex';
+        addBtn.onclick = function() { handleDynamicButtonClick(this, idx); };
+      } else {
+        addBtn.style.display = 'none';
+      }
+    }
+  });
+}
+
+function handleDeleteRow(btnEl) {
+  const container = document.getElementById('modal-positions-container');
+  const rows = container.querySelectorAll('.position-config-row');
+  if (rows.length <= 1) return;
+  const row = btnEl.closest('.position-config-row');
+  row.remove();
+  const freshRows = container.querySelectorAll('.position-config-row');
+  freshRows.forEach((fr, fIdx) => {
+    fr.querySelector('.position-label-text').textContent = `職務 ${fIdx + 1}`;
+  });
+  updateModalButtonsState();
+}
+
+async function handleRuleSubmit(event) {
+  event.preventDefault();
+
+  const ruleId = document.getElementById('modal-rule-id').value;
+  const container = document.getElementById('modal-positions-container');
+  const rows = container.querySelectorAll('.position-config-row');
+
+  const positionIds = [];
+  rows.forEach(r => {
+    const val = r.querySelector('.pos-title-select').value;
+    if (val) positionIds.push(val);
+  });
+
+  if (positionIds.length === 0) {
+    alert('請至少選擇一個職務欄位！');
+    return;
+  }
+
+  const url = ruleId ? `/api/restriction-rules/${ruleId}` : '/api/restriction-rules';
+  const method = ruleId ? 'PATCH' : 'POST';
+
+  try {
+    const res = await fetch(url, {
+      method,
+      credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ position_ids: positionIds }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      const msg = err.detail || (typeof err.detail === 'string' ? err.detail : '儲存失敗');
+      alert(Array.isArray(msg) ? msg.map(m => m.msg || m).join('\n') : msg);
+      return;
+    }
+    toast(ruleId ? '時段限制規則已成功更新' : '新時段限制規則已啟用');
+    await fetchRestrictionRules();
+    renderRestrictionRulesList();
+    closeRestrictionModal();
+  } catch (e) {
+    console.error(e);
+    toast('儲存規則時發生錯誤', 'error');
+  }
+}
+
+async function deleteRestrictionRule(ruleId) {
+  if (!confirm('確認要刪除此項時段限制規則嗎？')) return;
+  try {
+    const res = await fetch(`/api/restriction-rules/${ruleId}`, {
+      method: 'DELETE',
+      credentials: 'same-origin',
+    });
+    if (!res.ok) throw new Error('刪除失敗');
+    await fetchRestrictionRules();
+    renderRestrictionRulesList();
+    toast('時段限制規則已刪除', 'success');
+  } catch (e) {
+    console.error(e);
+    toast('刪除規則失敗', 'error');
+  }
+}
+
+// --- 頁面初始加載集成 ---
+(async () => {
+  await loadSlots();
+  await loadCompanies();   // 先載公司，讓職缺下拉有選項
+  await loadPositions();
+  await fetchRestrictionRules();
+  startPreviewAutoRefresh();
+  renderRestrictionRulesList();
+})();
+
+
+</script>
+</body>
+</html>

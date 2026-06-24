@@ -1,0 +1,1254 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>面試預約平台</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght=400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/style.css">
+
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+
+  <style>
+    /* 全域防溢出基底 */
+    *, *::before, *::after {
+      box-sizing: border-box !important;
+    }
+
+    body {
+      overflow-x: hidden; /* 全面封鎖橫向捲軸 */
+      padding: 0;
+      margin: 0;
+    }
+
+    .page {
+      width: 100% !important;
+      max-width: 630px !important;
+      margin: 0 auto;
+      padding: 16px !important;
+    }
+
+    .card {
+      width: 100% !important;
+      max-width: 100% !important;
+      box-sizing: border-box !important;
+      overflow: hidden; /* 防止內部元件撐開卡片 */
+    }
+
+    /* 步驟流程防跑版修正 */
+    .steps {
+      display: flex !important;
+      flex-wrap: nowrap !important; /* 強制不換行 */
+      overflow-x: auto !important;  /* 螢幕太小時允許左右滑動 */
+      -webkit-overflow-scrolling: touch;
+      gap: 8px !important;
+      padding-bottom: 8px;
+      margin-bottom: 20px !important;
+    }
+    /* 隱藏行動裝置的步驟條捲軸，保持美觀 */
+    .steps::-webkit-scrollbar {
+      display: none;
+    }
+    .step {
+      flex: 0 0 auto !important; /* 防止被擠壓變形 */
+      font-size: 13px !important;
+      white-space: nowrap !important; /* 文字絕不自動換行 */
+      padding: 6px 12px !important;
+    }
+
+    /* 公司卡片單欄排列佈局 */
+    .company-grid {
+      display: grid !important;
+      grid-template-columns: 1fr !important; /* 永遠單欄上下排列 */
+      gap: 16px !important;
+      margin-top: 12px;
+      width: 100%;
+    }
+
+    .company-card-btn {
+      background: #ffffff !important; /* 預設純白背景 */
+      border: 2px solid var(--border, #e9ecef) !important;
+      border-radius: var(--radius, 8px);
+      padding: 24px 28px;
+      text-align: left;
+      font-size: 16px;
+      font-weight: 500;
+      color: var(--text1, #212529);
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      justify-content: center;
+      position: relative;
+      overflow: hidden;
+      width: 100%;
+    }
+
+    .company-card-btn:hover {
+      border-color: #b88400 !important;
+      background: #fffcf5 !important;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(184, 132, 0, 0.08);
+    }
+
+    /* 左側經典金色裝飾條 */
+    .company-card-btn::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 4px;
+      height: 100%;
+      background: #b88400;
+      opacity: 0.8;
+    }
+
+    .comp-title-zh {
+      font-family: 'Noto Sans TC', sans-serif;
+      font-weight: 700;
+      font-size: 17px;
+      color: #1e293b;
+      margin-bottom: 4px;
+      line-height: 1.4;
+      padding-right: 100px; /* 防止文字與右側標籤重疊 */
+    }
+
+    .comp-title-en {
+      font-size: 11px;
+      color: #64748b;
+      letter-spacing: 0.4px;
+      text-transform: uppercase;
+      padding-right: 100px;
+    }
+
+    /* 右上角進入標籤 */
+    .comp-status-tag {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      right: 28px;
+      font-size: 12px;
+      background: #f1f5f9;
+      color: #475569;
+      padding: 4px 12px;
+      border-radius: 4px;
+      font-weight: 500;
+      transition: all 0.2s ease;
+      white-space: nowrap;
+    }
+    .company-card-btn:hover .comp-status-tag {
+      background: #b88400 !important;
+      color: #ffffff !important;
+    }
+
+    /* 表單元件防跑版 */
+    input[type="text"], input[type="email"], input[type="tel"], select {
+      width: 100% !important;
+      max-width: 100% !important;
+      box-sizing: border-box !important;
+    }
+
+    /* 彈性按鈕群組 */
+    .btn-group {
+      display: flex;
+      gap: 10px;
+      margin-top: 20px;
+      flex-wrap: wrap; /* 超出寬度時自動安全換行 */
+    }
+
+    /* 內嵌式錄影須知基本標籤樣式 */
+    .notice-checkbox-label {
+      user-select: none;
+    }
+
+    /* 手機版極端螢幕 RWD 修正斷點 */
+    @media (max-width: 576px) {
+      /* Nav */
+      nav { flex-wrap: wrap; gap: 6px; padding: 10px 14px; }
+      .nav-links { gap: 6px; flex-wrap: wrap; font-size: 13px; }
+      .nav-links a { padding: 4px 6px; }
+      .company-card-btn {
+        padding: 20px 20px !important;
+      }
+      .comp-title-zh {
+        font-size: 15px !important;
+        padding-right: 0 !important;
+      }
+      .comp-title-en {
+        padding-right: 0 !important;
+      }
+      .comp-status-tag {
+        position: static !important;
+        transform: none !important;
+        margin-top: 12px;
+        display: inline-block;
+      }
+      /* 按鈕並列縮小：flex 均分不強制全寬 */
+      .btn-group { gap: 8px; }
+      .btn-group .btn {
+        flex: 1 1 0;
+        min-width: 0;
+        font-size: 13px;
+        padding: 11px 8px;
+        white-space: nowrap;
+      }
+      /* Prevent iOS zoom on inputs */
+      input[type="text"],
+      input[type="email"],
+      input[type="tel"],
+      input[type="url"],
+      select {
+        font-size: 16px !important;
+      }
+      /* Query email row stacks */
+      #query-booking-container > div:last-child {
+        flex-direction: column;
+      }
+      #query-email-input {
+        min-width: 0 !important;
+        width: 100% !important;
+      }
+      #query-booking-btn {
+        width: 100% !important;
+      }
+      /* Recording notice tighter */
+      .recording-notice-box { padding: 14px; }
+    }
+
+    /* Very small phones */
+    @media (max-width: 380px) {
+      .page { padding: 10px !important; }
+      .step { font-size: 11px !important; padding: 5px 10px !important; }
+    }
+  </style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-logo">INTERVIEW <span>PLATFORM</span></div>
+  <div class="nav-links">
+    <a href="/" class="active">應徵者預約</a>
+<!--    <a href="/hr/login">HR 後台</a>-->
+  </div>
+</nav>
+
+<div class="page">
+  <div class="page-header">
+    <h1>面試時段預約</h1>
+  </div>
+
+  <div class="steps" id="steps">
+    <div class="step active" id="step-1">① 選擇公司</div>
+    <div class="step" id="step-2">② 選擇職缺</div>
+    <div class="step" id="step-3">③ 選擇時段</div>
+    <div class="step" id="step-4">④ 填寫資料</div>
+    <div class="step" id="step-5">⑤ 確認資料</div>
+    <div class="step" id="step-6">⑥ 預約完成</div>
+  </div>
+
+  <div id="panel-1" class="card">
+    <div class="card-title" style="margin-bottom: 20px; border-left: 4px solid #b88400; padding-left: 10px;">請選擇您要應徵的公司</div>
+    <div class="company-grid" id="company-grid">
+      <div style="color:var(--text2); font-size:14px; padding: 16px 0;">公司列表載入中…</div>
+    </div>
+  </div>
+
+  <div id="panel-2" class="card" style="display:none">
+    <div class="card-title">請選擇應徵職缺</div>
+    <div class="form-group">
+      <select id="position-select">
+        <option value="">— 請選擇 —</option>
+      </select>
+    </div>
+    <div class="btn-group">
+<!--      <button class="btn btn-ghost" onclick="goStep(1)">←返回</button>-->
+      <button class="btn btn-primary" id="step2-next" disabled>下一步 →</button>
+      <button class="btn" id="go-modify-mode-btn" style="background-color: var(--bg3); color: var(--text1); border: 1px solid var(--border);">已有預約？</button>
+    </div>
+  </div>
+
+  <div id="panel-3" class="card" style="display:none">
+    <div class="card-title">請選擇面試時段</div>
+    <div id="slots-container" class="slot-list"></div>
+    <div style="margin-top:16px" class="btn-group">
+      <button class="btn btn-ghost btn-sm" onclick="goStep(2)">← 上一步</button>
+    </div>
+  </div>
+
+  <div id="panel-4" class="card" style="display:none">
+    <div class="card-title" id="panel-4-title">填寫應徵者資料</div>
+
+    <div id="query-booking-container" style="display:none; background: transparent; padding: 0; border-radius: 0; margin-bottom: 24px; border-left: 4px solid #b88400; padding-left: 12px;">
+      <div style="font-size: 14px; color: var(--text1); margin-bottom: 10px; font-weight: 500;">請輸入您預約時填寫的 Email 以驗證身分並撈取紀錄：</div>
+      <div style="display:flex; gap:10px; align-items: center; flex-wrap: wrap;">
+        <input type="email" id="query-email-input" placeholder=" &nbsp; &nbsp; your@email.com" style="flex:1; min-width: 200px; margin-bottom:0; height: 42px;">
+        <button class="btn" id="query-booking-btn" style="background-color: #b88400; color: white; white-space: nowrap; height: 42px; padding: 0 20px; flex: 1;">查詢紀錄</button>
+      </div>
+    </div>
+
+    <div id="selected-slot-info" style="margin-bottom:20px; font-size:14px; color:var(--text1); display:none;"></div>
+    <div id="book-error" class="alert alert-error" style="display:none"></div>
+    <div id="existing-booking-info" class="alert alert-info" style="display:none; margin-top:12px; margin-bottom: 20px;"></div>
+
+    <div id="google-signin-section" style="margin-bottom: 20px; padding: 16px; background: var(--bg2); border-radius: var(--radius);">
+      <div style="font-size: 12px; color: var(--text2); margin-bottom: 10px; text-align: center;">使用 Google 帳號快速填入資料</div>
+      <button type="button" class="btn" id="google-signin-btn" onclick="handleApplicantGoogleSignIn()" style="width: 100%; background: white; color: var(--text1); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; gap: 8px; padding: 12px;">
+        <svg width="18" height="18" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+          <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+          <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+          <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+        </svg>
+        使用 Google 帳號登入
+      </button>
+    </div>
+    <div id="reselect-inline-container" style="display:none; background: var(--bg2); padding: 16px; border-radius: var(--radius); margin-bottom: 20px;">
+      <div class="form-group">
+        <label>應徵職缺</label>
+        <select id="inline-position-select">
+          <option value="">— 請選擇 —</option>
+        </select>
+      </div>
+      <div class="form-group" id="inline-slots-group">
+        <label>面試時段</label>
+        <select id="inline-slot-select">
+          <option value="">— 請先選擇上方職缺 —</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label>姓名(全名) *</label>
+      <input type="text" id="applicant-name" placeholder="請輸入全名(請勿輸入暱稱)" required>
+    </div>
+    <div class="form-group">
+      <label>Email * <span id="email-hint" style="color:var(--text2); font-weight:normal; font-size:12px; display:none;">(修改紀錄時無法變更 Email)</span></label>
+      <input type="email" id="applicant-email" placeholder="your@email.com" required>
+    </div>
+    <div class="form-group">
+      <label>電話 *</label>
+      <input type="tel" id="applicant-phone" placeholder="0912-345-678" required>
+    </div>
+
+    <!-- ==========================================================================
+       優化後：上市公司風格 - 視訊面談錄影須知區塊 (維持原配色)
+       ========================================================================== -->
+    <div class="recording-notice-box" style="border-top: 3px solid #b88400; background: #f8fafc; padding: 20px; border-radius: 8px; margin-top: 24px;">
+      <div class="notice-title" style="font-size: 15px; font-weight: 700; color: #b88400; margin-bottom: 14px; letter-spacing: 0.5px; display: flex; align-items: center; gap: 6px;">
+       視訊面談錄影告知
+      </div>
+
+      <div style="font-size: 13px; color: var(--text1, #212529); line-height: 1.6; border-bottom: 1px dashed #e2e8f0; padding-bottom: 12px; margin-bottom: 12px;">
+        我司於第一階段視訊面談過程中將進行<b>全程錄影記錄</b>。<br>請於勾選同意前詳閱以下說明事項：
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 10px; font-size: 13px; line-height: 1.6; color: var(--text1, #212529);">
+        <div style="display: flex; align-items: flex-start; gap: 6px;">
+          <span style="color: #b88400; font-weight: bold; flex-shrink: 0;">一、</span>
+          <span><strong>目的與用途：</strong>面談影片僅會用於通過第一階段後，提供給第二階段的單位主管當作二面前更加認識您的補充資料，不做其他用途。</span>
+        </div>
+
+        <div style="display: flex; align-items: flex-start; gap: 6px;">
+          <span style="color: #b88400; font-weight: bold; flex-shrink: 0;">二、</span>
+          <span><strong>保存與銷毀期限：</strong>面談影片的保存期間為面試當日過後的一星期，但若經評估未通過第一階段便會直接刪除。</span>
+        </div>
+
+        <div style="display: flex; align-items: flex-start; gap: 6px;">
+          <span><b>若有任何問題歡迎在104留下訊息或是直接來電，我們將會儘速與您聯繫。</b></span>
+        </div>
+      </div>
+
+      <label class="notice-checkbox-label" style="display: flex; align-items: center; gap: 10px; cursor: pointer; font-weight: 700; margin-top: 18px; padding: 12px 14px; background: #ffffff; border: 1px solid #b88400; border-radius: 6px; color: #1e293b; transition: all 0.2s ease; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
+        <input type="checkbox" id="form-agree-checkbox" style="width: 16px; height: 16px; margin: 0; cursor: pointer; accent-color: #b88400;">
+        <span style="font-size: 13.5px;">本人已詳閱上述須知，並同意第一階段視訊面談錄影記錄 *</span>
+      </label>
+    </div>
+
+    <div class="btn-group">
+      <button class="btn btn-ghost" id="step4-back-btn">← 上一步</button>
+      <button class="btn btn-primary" id="submit-btn" onclick="validateStep4AndGoToPreview()">下一步：確認資料 →</button>
+      <button class="btn" id="confirm-modify-btn" style="display:none; background-color: #b88400; color: #ffffff; border: none;" disabled>確認修改原預約</button>
+      <button class="btn" id="step4-cancel-modify-btn" style="display:none; background-color: var(--bg3); color: var(--text1); border: 1px solid var(--border);" onclick="resetToInitialForm()">取消修改</button>
+    </div>
+  </div>
+
+  <div id="panel-5" class="card" style="display:none">
+    <div class="card-title">確認預約資料</div>
+    <p style="color:var(--text2);font-size:13px;margin-bottom:20px">請確認以下資料正確後，再按「確認送出」完成預約。</p>
+    <div id="preview-detail" style="background:var(--bg2);border-radius:var(--radius);padding:16px 20px;font-size:14px;line-height:2; word-break: break-all;"></div>
+    <div class="btn-group">
+      <button class="btn btn-ghost" id="preview-back-btn" onclick="goBackFromPreview()">← 修改資料</button>
+      <button class="btn btn-primary" id="preview-confirm-btn" onclick="confirmAndSubmit()">確認送出 →</button>
+    </div>
+    <div id="preview-error" class="alert alert-error" style="display:none;margin-top:12px"></div>
+  </div>
+
+  <div id="panel-6" class="card" style="display:none;text-align:center;padding:48px 24px">
+    <div style="font-size:40px;margin-bottom:16px">✅</div>
+    <h2 style="font-size:20px;font-weight:500;margin-bottom:8px">預約成功！</h2>
+    <p style="color:var(--text2);font-size:14px;margin-bottom:24px">
+      確認信已寄送至您的 Email，信中含有「取消預約」按鈕，<br>如需取消請點擊信中連結。
+    </p>
+    <div id="success-detail" style="background:var(--bg2);border-radius:var(--radius);padding:14px 20px;display:inline-block;text-align:left;font-size:13px;margin-bottom:24px; max-width: 100%; word-break: break-all;"></div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+let selectedCompanyValue = '';
+let selectedCompanyName = '';
+let selectedPositionId = null;
+let selectedPositionTitle = '';
+let selectedSlot = null;
+let duplicateBookingContext = null;
+let modifyBookingContext = null;
+let allPositions = [];
+let isExplicitModifyMode = false;
+let isFromGoogleSignIn = false;
+
+const toast = (msg, type='success') => {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = `show ${type}`;
+  setTimeout(() => el.className = '', 2800);
+};
+
+function goStep(n) {
+  [1,2,3,4,5,6].forEach(i => {
+    const panel = document.getElementById(`panel-${i}`);
+    if (panel) panel.style.display = i===n ? 'block' : 'none';
+    const stepEl = document.getElementById(`step-${i}`);
+    if (stepEl) stepEl.className = 'step' + (i===n ? ' active' : i<n ? ' done' : '');
+  });
+  const activeStep = document.getElementById(`step-${n}`);
+  if (activeStep) {
+    activeStep.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+  }
+}
+
+(async () => {
+  // ── 動態載入公司列表 ──────────────────────────────────────
+  let _loadedCompanies = [];
+  try {
+    const res = await fetch('/api/companies');
+    const companies = await res.json();
+    _loadedCompanies = companies;
+    const grid = document.getElementById('company-grid');
+    if (!companies.length) {
+      grid.innerHTML = '<div style="color:var(--text2); font-size:14px; padding:16px 0;">目前尚無開放招募的公司</div>';
+    } else {
+      grid.innerHTML = '';
+      companies.forEach(c => {
+        const div = document.createElement('div');
+        div.className = 'company-card-btn';
+        div.onclick = () => selectCompany(c.id, c.name);
+        div.innerHTML = `
+          <div class="comp-title-zh">${c.name}</div>
+          <span class="comp-status-tag">進入招募流程</span>
+        `;
+        grid.appendChild(div);
+      });
+    }
+  } catch(e) {
+    console.error('無法載入公司列表', e);
+    document.getElementById('company-grid').innerHTML = '<div style="color:var(--text2); font-size:14px; padding:16px 0;">公司列表載入失敗，請重新整理頁面</div>';
+  }
+
+  // ── 動態載入職缺列表 ──────────────────────────────────────
+  try {
+    const res = await fetch('/api/positions?active_only=true');
+    allPositions = await res.json();
+
+    const sel = document.getElementById('position-select');
+    const inlineSel = document.getElementById('inline-position-select');
+
+    allPositions.forEach(p => {
+      const opt = document.createElement('option');
+      opt.value = p.id;
+      opt.textContent = p.title;
+      sel.appendChild(opt);
+
+      const optInline = opt.cloneNode(true);
+      inlineSel.appendChild(optInline);
+    });
+  } catch(e) {
+    console.error("無法載入職缺列表", e);
+  }
+
+  // 放在兩個 API 都載入完之後，確保 allPositions 已就緒
+  const _params = new URLSearchParams(window.location.search);
+  const _presetName = _params.get('company');
+  if (_presetName && _loadedCompanies.length) {
+    const _match = _loadedCompanies.find(c => c.name === _presetName);
+    if (_match) {
+      // 隱藏 step-1（選公司）和進度條第一步，直接跳到職缺選擇
+      document.getElementById('step-1').style.display = 'none';
+      selectCompany(_match.id, _match.name);
+    } else {
+      // 找不到該公司名稱，顯示提示
+      document.getElementById('company-grid').innerHTML = '<div style="color:#c0392b; font-size:14px; padding:16px 0;">找不到指定的公司，請確認連結是否正確。</div>';
+    }
+  }
+})();
+
+function selectCompany(companyId, companyName) {
+  selectedCompanyValue = companyId;
+  selectedCompanyName = companyName;
+  updatePositionsForCompany();
+  goStep(2);
+}
+
+function updatePositionsForCompany() {
+  const sel = document.getElementById('position-select');
+  const inlineSel = document.getElementById('inline-position-select');
+
+  sel.innerHTML = '<option value="">— 請選擇 —</option>';
+  inlineSel.innerHTML = '<option value="">— 請選擇 —</option>';
+
+  const filteredPositions = allPositions.filter(p => p.company === selectedCompanyName);
+
+  filteredPositions.forEach(p => {
+    const opt = document.createElement('option');
+    opt.value = p.id;
+    opt.textContent = p.title;
+    sel.appendChild(opt);
+
+    const optInline = opt.cloneNode(true);
+    inlineSel.appendChild(optInline);
+  });
+
+  if (filteredPositions.length === 0) {
+    sel.innerHTML = '<option value="">目前無該公司的職缺</option>';
+    inlineSel.innerHTML = '<option value="">目前無該公司的職缺</option>';
+  }
+}
+
+document.getElementById('go-modify-mode-btn').addEventListener('click', () => {
+  isExplicitModifyMode = true;
+  goStep(4);
+
+  document.getElementById('panel-4-title').textContent = '修改應徵預約紀錄';
+  document.getElementById('query-booking-container').style.display = 'block';
+  document.getElementById('google-signin-section').style.display = 'none';
+  document.getElementById('step4-back-btn').style.display = 'none';
+  document.getElementById('step4-cancel-modify-btn').style.display = 'inline-flex';
+  document.getElementById('submit-btn').style.display = 'none';
+  document.getElementById('confirm-modify-btn').style.display = 'inline-flex';
+  document.getElementById('confirm-modify-btn').disabled = true;
+
+  document.getElementById('applicant-name').disabled = true;
+  document.getElementById('applicant-email').disabled = false;
+  document.getElementById('applicant-phone').disabled = true;
+});
+
+document.getElementById('query-booking-btn').addEventListener('click', async () => {
+  const emailInput = document.getElementById('query-email-input').value.trim();
+  const errEl = document.getElementById('book-error');
+  const existEl = document.getElementById('existing-booking-info');
+
+  errEl.style.display = 'none';
+  existEl.style.display = 'none';
+
+  if (!emailInput) {
+    errEl.textContent = '請輸入 Email 再進行查詢';
+    errEl.style.display = 'block';
+    return;
+  }
+
+  try {
+    const res = await fetch(`/api/bookings/by-email?email=${encodeURIComponent(emailInput)}`);
+    if (!res.ok) {
+      throw new Error('查無此 Email 的有效預約紀錄，請確認輸入是否正確。');
+    }
+
+    const d = await res.json();
+    const resolvedBookingId = d.booking_id || d.id;
+
+    modifyBookingContext = { email: emailInput, bookingId: String(resolvedBookingId) };
+    duplicateBookingContext = { email: emailInput };
+
+    document.getElementById('applicant-email').value = emailInput;
+    document.getElementById('applicant-email').disabled = true;
+    document.getElementById('email-hint').style.display = 'inline';
+
+    document.getElementById('applicant-name').disabled = false;
+    document.getElementById('applicant-phone').disabled = false;
+
+    document.getElementById('applicant-name').value = d.applicant_name || d.name || '';
+    document.getElementById('applicant-phone').value = d.applicant_phone || d.phone || '';
+
+
+    document.getElementById('reselect-inline-container').style.display = 'block';
+    if (d.position_id) {
+      document.getElementById('inline-position-select').value = d.position_id;
+      selectedPositionId = d.position_id;
+      selectedPositionTitle = document.getElementById('inline-position-select').options[document.getElementById('inline-position-select').selectedIndex]?.text || '';
+
+      await fetchAndPopulateInlineSlots(d.slot_id, {
+        date: d.slot_date,
+        start: d.start_time,
+        end: d.end_time
+      });
+
+      selectedSlot = {
+        id: String(d.slot_id),
+        date: d.slot_date,
+        start: d.start_time ? d.start_time.slice(0, 5) : '',
+        end: d.end_time ? d.end_time.slice(0, 5) : ''
+      };
+
+      updateSelectedSlotInfo();
+    }
+
+    document.getElementById('confirm-modify-btn').disabled = false;
+    toast('紀錄查詢成功，已為您自動填入歷史預約欄位。');
+
+  } catch (e) {
+    errEl.textContent = e.message || '查詢失敗';
+    errEl.style.display = 'block';
+  }
+});
+
+document.getElementById('position-select').addEventListener('change', function() {
+  const btn = document.getElementById('step2-next');
+  btn.disabled = !this.value;
+  selectedPositionId = this.value;
+  selectedPositionTitle = this.options[this.selectedIndex]?.text || '';
+});
+
+document.getElementById('step2-next').addEventListener('click', () => {
+  if (!selectedPositionId) return;
+  loadSlots();
+  goStep(3);
+});
+
+document.getElementById('step4-back-btn').addEventListener('click', () => {
+  if (isFromGoogleSignIn || isExplicitModifyMode) {
+    resetToInitialForm();
+  } else {
+    goStep(3);
+  }
+});
+
+async function fetchAndPopulateInlineSlots(targetSlotId = null, fallbackSlotInfo = null) {
+  const inlineSlotSelect = document.getElementById('inline-slot-select');
+  if (!selectedPositionId) {
+    inlineSlotSelect.innerHTML = '<option value="">— 請先選擇上方職缺 —</option>';
+    return;
+  }
+
+  inlineSlotSelect.innerHTML = '<option value="">時段載入中…</option>';
+
+  try {
+    let url = `/api/slots?open_only=true&position_id=${encodeURIComponent(selectedPositionId)}`;
+    const res = await fetch(url);
+    const slots = await res.json();
+
+    inlineSlotSelect.innerHTML = '<option value="">— 請選擇時段 —</option>';
+
+    slots.forEach(s => {
+      const startTime = s.start_time.slice(0, 5);
+      const endTime = s.end_time.slice(0, 5);
+      const opt = document.createElement('option');
+      opt.value = s.id;
+      opt.dataset.date = s.slot_date;
+      opt.dataset.start = startTime;
+      opt.dataset.end = endTime;
+      opt.textContent = `${s.slot_date} (${startTime} – ${endTime}) — 剩餘 ${s.max_capacity - s.booked_count} 名額`;
+      inlineSlotSelect.appendChild(opt);
+    });
+
+    if (targetSlotId) {
+      let hasTarget = Array.from(inlineSlotSelect.options).some(opt => opt.value == targetSlotId);
+
+      if (!hasTarget && fallbackSlotInfo && fallbackSlotInfo.date) {
+        const fStart = fallbackSlotInfo.start ? fallbackSlotInfo.start.slice(0, 5) : '';
+        const fEnd = fallbackSlotInfo.end ? fallbackSlotInfo.end.slice(0, 5) : '';
+
+        const backupOpt = document.createElement('option');
+        backupOpt.value = targetSlotId;
+        backupOpt.dataset.date = fallbackSlotInfo.date;
+        backupOpt.dataset.start = fStart;
+        backupOpt.dataset.end = fEnd;
+        backupOpt.textContent = `${fallbackSlotInfo.date} (${fStart} – ${fEnd}) — (目前您保留的時段)`;
+        inlineSlotSelect.appendChild(backupOpt);
+      }
+
+      inlineSlotSelect.value = targetSlotId;
+    } else if (!slots.length) {
+      inlineSlotSelect.innerHTML = '<option value="">目前無可用時段</option>';
+    }
+  } catch (err) {
+    console.error("載入時段失敗:", err);
+    inlineSlotSelect.innerHTML = '<option value="">載入時段失敗</option>';
+  }
+}
+
+document.getElementById('inline-position-select').addEventListener('change', async function() {
+  if (!this.value) {
+    selectedPositionId = null;
+    selectedPositionTitle = '';
+    document.getElementById('inline-slot-select').innerHTML = '<option value="">— 請先選擇上方職缺 —</option>';
+    document.getElementById('selected-slot-info').style.display = 'none';
+    return;
+  }
+  selectedPositionId = this.value;
+  selectedPositionTitle = this.options[this.selectedIndex]?.text || '';
+  await fetchAndPopulateInlineSlots();
+  updateSelectedSlotInfo();
+});
+
+function updateSelectedSlotInfo() {
+  const inlineSlotSelect = document.getElementById('inline-slot-select');
+  const opt = inlineSlotSelect.options[inlineSlotSelect.selectedIndex];
+
+  if (!inlineSlotSelect.value || inlineSlotSelect.value === "") {
+    document.getElementById('selected-slot-info').style.display = 'none';
+    selectedSlot = null;
+    return;
+  }
+
+  selectedSlot = {
+    id: inlineSlotSelect.value,
+    date: opt.dataset.date,
+    start: opt.dataset.start,
+    end: opt.dataset.end
+  };
+
+  const infoEl = document.getElementById('selected-slot-info');
+}
+
+document.getElementById('inline-slot-select').addEventListener('change', updateSelectedSlotInfo);
+
+async function loadSlots() {
+  const container = document.getElementById('slots-container');
+  container.innerHTML = '<div class="empty">載入中…</div>';
+
+  if (!selectedPositionId) {
+    container.innerHTML = '<div class="empty">請先選擇應徵職缺</div>';
+    return;
+  }
+
+  let url = `/api/slots?open_only=true&position_id=${encodeURIComponent(selectedPositionId)}`;
+  const res = await fetch(url);
+  const slots = await res.json();
+  if (!slots.length) {
+    container.innerHTML = '<div class="empty">目前無可用時段，請稍後再試</div>';
+    return;
+  }
+  container.innerHTML = slots.map(s => {
+    const startTime = s.start_time.slice(0, 5);
+    const endTime = s.end_time.slice(0, 5);
+
+    return `
+      <div class="slot-item" style="cursor:pointer" onclick="selectSlot('${s.id}','${s.slot_date}','${startTime}','${endTime}','${s.max_capacity - s.booked_count}')" id="slot-${s.id}">
+        <div style="flex:1; min-width: 0;">
+          <div class="slot-date">${s.slot_date}</div>
+          <div class="slot-time">${startTime} – ${endTime}</div>
+          <div class="slot-meta">剩餘 ${s.max_capacity - s.booked_count} 個名額</div>
+        </div>
+        <div style="color:var(--accent);font-size:13px; flex-shrink: 0;">選擇 →</div>
+      </div>
+    `;
+  }).join('');
+}
+
+function selectSlot(id, date, start, end, remain) {
+  selectedSlot = { id, date, start, end, remain };
+
+  const infoEl = document.getElementById('selected-slot-info');
+  infoEl.innerHTML = `
+    <strong>應徵職缺：</strong>${selectedPositionTitle}&emsp;
+    <strong>日期：</strong>${date}&emsp;
+    <strong>時間：</strong>${start} – ${end}
+  `;
+  infoEl.style.display = 'block';
+
+  document.getElementById('reselect-inline-container').style.display = 'none';
+  document.getElementById('panel-4-title').textContent = '填寫應徵者資料';
+  document.getElementById('step4-back-btn').style.display = 'inline-flex';
+  goStep(4);
+}
+
+// 驗證 ④ 表單欄位與內嵌勾選框，通過則直接前往 ⑤ 確認資料頁面
+function validateStep4AndGoToPreview() {
+  const errEl = document.getElementById('book-error');
+  errEl.style.display = 'none';
+
+  const name  = document.getElementById('applicant-name').value.trim();
+  const email = document.getElementById('applicant-email').value.trim();
+  const phone = document.getElementById('applicant-phone').value.trim();
+  const isAgree = document.getElementById('form-agree-checkbox').checked;
+
+  if (!name || !email || !phone) {
+    errEl.textContent = '請填寫所有必填欄位';
+    errEl.style.display = 'block';
+    return;
+  }
+  if (!/^09\d{8}$/.test(phone)) {
+    errEl.textContent = '請輸入正確的 10 碼手機號碼 (例如: 0912345678)';
+    errEl.style.display = 'block';
+    return;
+  }
+  if (!selectedSlot?.id || !selectedPositionId) {
+    errEl.textContent = '請先選擇面試時段';
+    errEl.style.display = 'block';
+    return;
+  }
+  if (!isAgree) {
+    errEl.textContent = '請閱讀並勾選同意「第一階段視訊面談錄影記錄」以繼續流程';
+    errEl.style.display = 'block';
+    return;
+  }
+
+  // 驗證完成，直接進入確認畫面
+  goToPreview();
+}
+
+// 渲染 ⑤ 確認畫面並切換 Panel
+function goToPreview() {
+  const name  = document.getElementById('applicant-name').value.trim();
+  const email = document.getElementById('applicant-email').value.trim();
+  const phone = document.getElementById('applicant-phone').value.trim();
+
+  document.getElementById('preview-detail').innerHTML = `
+    <div><strong>應徵公司：</strong>${selectedCompanyName}</div>
+    <div><strong>職缺：</strong>${selectedPositionTitle}</div>
+    <div><strong>面試日期：</strong>${selectedSlot.date}</div>
+    <div><strong>面試時間：</strong>${selectedSlot.start} – ${selectedSlot.end}</div>
+    <hr style="border:none;border-top:1px solid var(--border);margin:10px 0">
+    <div><strong>姓名(全名)：</strong>${name}</div>
+    <div><strong>Email：</strong>${email}</div>
+    <div><strong>電話：</strong>${phone}</div>
+  `;
+  document.getElementById('preview-error').style.display = 'none';
+  goStep(5);
+}
+
+async function confirmAndSubmit() {
+  const confirmBtn = document.getElementById('preview-confirm-btn');
+  const backBtn = document.getElementById('preview-back-btn');
+  const errEl = document.getElementById('preview-error');
+
+  const name  = document.getElementById('applicant-name').value.trim();
+  const email = document.getElementById('applicant-email').value.trim();
+  const phone = document.getElementById('applicant-phone').value.trim();
+
+  confirmBtn.disabled = true;
+  confirmBtn.textContent = '送出中…';
+  backBtn.disabled = true;
+  errEl.style.display = 'none';
+
+  try {
+    const res = await fetch('/api/bookings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        slot_id: String(selectedSlot.id),
+        position_id: String(selectedPositionId),
+        email: email,
+        name: name,
+        phone: phone,
+        company: selectedCompanyValue
+      })
+    });
+
+    let responseData = null;
+    try { responseData = await res.json(); } catch(e) {}
+
+    if (!res.ok) {
+      const detailObj = responseData?.detail;
+      const isDuplicate = (
+        detailObj?.code === 'DUPLICATE_BOOKING' ||
+        detailObj?.code === 'duplicate_confirmed_booking' ||
+        (typeof detailObj === 'string' && (detailObj.includes('已預約過') || detailObj.includes('已確認')))
+      );
+
+      if (detailObj?.code === 'recent_auto_completed_booking') {
+        throw new Error(detailObj?.message || '您最近完成過預約，請稍後再預約。');
+      }
+
+      if (isDuplicate) {
+        const foundBookingId = detailObj?.booking_id || responseData?.booking_id || detailObj?.id || responseData?.id;
+        if (!foundBookingId) throw new Error('偵測到重複預約，但系統無法取得紀錄 ID。');
+
+        modifyBookingContext = { email, bookingId: String(foundBookingId) };
+        duplicateBookingContext = { email };
+
+        goStep(4);
+        document.getElementById('panel-4-title').textContent = '修改應徵預約紀錄';
+        document.getElementById('reselect-inline-container').style.display = 'block';
+
+        const oldPositionId = detailObj?.position_id || selectedPositionId;
+        document.getElementById('inline-position-select').value = oldPositionId || '';
+        selectedPositionId = oldPositionId;
+        selectedPositionTitle = document.getElementById('inline-position-select').options[document.getElementById('inline-position-select').selectedIndex]?.text || selectedPositionTitle;
+
+        const oldSlotId = detailObj?.slot_id || (selectedSlot ? selectedSlot.id : null);
+        await fetchAndPopulateInlineSlots(oldSlotId, {
+          date: detailObj?.slot_date || selectedSlot?.date,
+          start: detailObj?.start_time || selectedSlot?.start,
+          end: detailObj?.end_time || selectedSlot?.end
+        });
+
+        selectedSlot = {
+          id: String(oldSlotId),
+          date: detailObj?.slot_date || selectedSlot?.date,
+          start: detailObj?.start_time ? detailObj.start_time.slice(0,5) : (selectedSlot?.start || ''),
+          end: detailObj?.end_time ? detailObj.end_time.slice(0,5) : (selectedSlot?.end || '')
+        };
+        updateSelectedSlotInfo();
+
+        document.getElementById('submit-btn').style.display = 'none';
+        document.getElementById('step4-back-btn').style.display = 'none';
+        document.getElementById('step4-cancel-modify-btn').style.display = 'inline-flex';
+        document.getElementById('confirm-modify-btn').style.display = 'inline-flex';
+        document.getElementById('confirm-modify-btn').disabled = false;
+
+        document.getElementById('applicant-email').disabled = true;
+        document.getElementById('email-hint').style.display = 'inline';
+        document.getElementById('applicant-name').value = name;
+        document.getElementById('applicant-phone').value = phone;
+
+        const displayTitle = detailObj?.position_title || selectedPositionTitle;
+        const displayDate = detailObj?.slot_date || selectedSlot?.date;
+
+        const existEl = document.getElementById('existing-booking-info');
+        existEl.innerHTML = `
+          <div style="font-weight:600;margin-bottom:8px">您目前的既有預約：</div>
+          <div style="margin:6px 0">職缺：${displayTitle}</div>
+          <div style="margin:6px 0">日期：${displayDate}</div>
+          <div style="margin:6px 0">時間：${selectedSlot.start} – ${selectedSlot.end}</div>
+        `;
+        existEl.style.display = 'block';
+
+        const bookErrEl = document.getElementById('book-error');
+        bookErrEl.textContent = '系統偵測到您已有預約紀錄。已為您切換至修改程序，下方已預填您的歷史資料。';
+        bookErrEl.style.display = 'block';
+        return;
+      }
+
+      throw new Error(typeof detailObj === 'string' ? detailObj : (detailObj?.message || '預約失敗'));
+    }
+
+    const bId = responseData?.id || responseData?.booking_id || responseData?.detail?.booking_id;
+    modifyBookingContext = { email: email, bookingId: String(bId || '') };
+    showSuccessPage(email);
+
+  } catch(err) {
+    errEl.textContent = err.message || '送出失敗，請稍後再試';
+    errEl.style.display = 'block';
+  } finally {
+    confirmBtn.disabled = false;
+    confirmBtn.textContent = '確認送出 →';
+    backBtn.disabled = false;
+  }
+}
+
+function goBackFromPreview() {
+  goStep(4);
+}
+
+function showSuccessPage(email) {
+  document.getElementById('success-detail').innerHTML = `
+    <div style="margin-bottom:6px"><strong>公司：</strong>${selectedCompanyName}</div>
+    <div style="margin-bottom:6px"><strong>職缺：</strong>${selectedPositionTitle}</div>
+    <div style="margin-bottom:6px"><strong>日期：</strong>${selectedSlot.date}</div>
+    <div style="margin-bottom:6px"><strong>時間：</strong>${selectedSlot.start} – ${selectedSlot.end}</div>
+    <div><strong>Email：</strong>${email}</div>
+  `;
+  goStep(6);
+}
+
+document.getElementById('confirm-modify-btn').addEventListener('click', async () => {
+  const errEl = document.getElementById('book-error');
+  const btn = document.getElementById('confirm-modify-btn');
+  const originalEmail = modifyBookingContext?.email || duplicateBookingContext?.email || '';
+  let resolvedBookingId = modifyBookingContext?.bookingId;
+
+  const name  = document.getElementById('applicant-name').value.trim();
+  const phone = document.getElementById('applicant-phone').value.trim();
+  const isAgree = document.getElementById('form-agree-checkbox').checked;
+
+  if (!name || !phone) {
+    errEl.textContent = '請填寫姓名與電話欄位';
+    errEl.style.display = 'block';
+    return;
+  }
+  if (!/^09\d{8}$/.test(phone)) {
+    errEl.textContent = '請輸入正確的 10 碼手機號碼';
+    errEl.style.display = 'block';
+    return;
+  }
+  if (!selectedSlot?.id || !selectedPositionId) {
+    errEl.textContent = '請確定您已選擇修改後的職缺與面試時段。';
+    errEl.style.display = 'block';
+    return;
+  }
+  if (!isAgree) {
+    errEl.textContent = '請閱讀並勾選同意「第一階段視訊面談錄影記錄」以確認修改';
+    errEl.style.display = 'block';
+    return;
+  }
+
+  errEl.style.display = 'none';
+  btn.disabled = true;
+  btn.textContent = '修改中…';
+
+  try {
+    const res = await fetch('/api/bookings/modify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        booking_id: String(resolvedBookingId),
+        slot_id: String(selectedSlot.id),
+        position_id: String(selectedPositionId),
+        name: name,
+        email: originalEmail,
+        phone: phone
+      })
+    });
+
+    const data = await res.json();
+    if (!res.ok) {
+      throw new Error((typeof data.detail === 'string' ? data.detail : JSON.stringify(data.detail)) || '修改失敗');
+    }
+
+    toast('預約修改成功！');
+    showSuccessPage(originalEmail);
+    document.getElementById('success-detail').innerHTML += `<div style="margin-top:10px;color:#331A00;font-weight:bold;">已成功修改原預約內容</div>`;
+  } catch (err) {
+    errEl.textContent = `修改失敗: ${err.message}`;
+    errEl.style.display = 'block';
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '確認修改原預約';
+  }
+});
+
+function resetToInitialForm() {
+  isExplicitModifyMode = false;
+  isFromGoogleSignIn = false;
+
+  document.getElementById('confirm-modify-btn').style.display = 'none';
+  document.getElementById('existing-booking-info').style.display = 'none';
+  document.getElementById('reselect-inline-container').style.display = 'none';
+  document.getElementById('query-booking-container').style.display = 'none';
+  document.getElementById('google-signin-section').style.display = 'block';
+  document.getElementById('book-error').style.display = 'none';
+
+  document.getElementById('selected-slot-info').style.display = 'none';
+  document.getElementById('selected-slot-info').innerHTML = '';
+
+  document.getElementById('submit-btn').style.display = 'inline-flex';
+  document.getElementById('step4-back-btn').style.display = 'inline-flex';
+  document.getElementById('step4-cancel-modify-btn').style.display = 'none';
+  document.getElementById('panel-4-title').textContent = '填寫應徵者資料';
+
+  document.getElementById('applicant-email').disabled = false;
+  document.getElementById('applicant-name').disabled = false;
+  document.getElementById('applicant-phone').disabled = false;
+  document.getElementById('email-hint').style.display = 'none';
+
+  // 清除內嵌勾選紀錄
+  document.getElementById('form-agree-checkbox').checked = false;
+
+  selectedCompanyValue = '';
+  selectedCompanyName = '';
+  selectedPositionId = null;
+  selectedPositionTitle = '';
+  selectedSlot = null;
+  duplicateBookingContext = null;
+  modifyBookingContext = null;
+  document.getElementById('preview-error').style.display = 'none';
+
+  document.getElementById('position-select').value = '';
+  document.getElementById('inline-position-select').value = '';
+  document.getElementById('query-email-input').value = '';
+  document.getElementById('inline-slot-select').innerHTML = '<option value="">— 請先選擇上方職缺 —</option>';
+  document.getElementById('step2-next').disabled = true;
+
+  ['applicant-name','applicant-email','applicant-phone'].forEach(id => document.getElementById(id).value = '');
+  goStep(1);
+}
+
+async function handleApplicantGoogleSignIn() {
+  // 跳轉前把已選狀態存進 sessionStorage，回來後可還原
+  sessionStorage.setItem('preLoginState', JSON.stringify({
+    selectedCompanyValue,
+    selectedCompanyName,
+    selectedPositionId,
+    selectedPositionTitle,
+    selectedSlot
+  }));
+  window.location.href = '/api/applicant/google-login';
+}
+
+function checkGoogleSignInCallback() {
+  const params = new URLSearchParams(window.location.search);
+  const googleEmail = params.get('google_email');
+  const googleName = params.get('google_name');
+  
+  console.log('[DEBUG] URL search params:', window.location.search);
+  console.log('[DEBUG] googleEmail:', googleEmail);
+  console.log('[DEBUG] googleName:', googleName);
+
+  if (googleEmail) {
+    console.log('[DEBUG] Found googleEmail, calling handleGoogleSignInSuccess...');
+    window.history.replaceState({}, document.title, window.location.pathname);
+    handleGoogleSignInSuccess(googleEmail);
+  } else {
+    console.log('[DEBUG] No googleEmail found in URL');
+  }
+}
+
+async function handleGoogleSignInSuccess(googleEmail) {
+  console.log('[DEBUG] handleGoogleSignInSuccess called with googleEmail:', googleEmail);
+  try {
+    const res = await fetch(`/api/bookings/by-email?email=${encodeURIComponent(googleEmail)}`);
+    console.log('[DEBUG] /api/bookings/by-email response status:', res.status);
+
+    if (res.ok) {
+      console.log('[DEBUG] Found existing booking, showing modify mode');
+      const d = await res.json();
+      const resolvedBookingId = d.booking_id || d.id;
+
+      modifyBookingContext = { email: googleEmail, bookingId: String(resolvedBookingId) };
+      duplicateBookingContext = { email: googleEmail };
+
+      isExplicitModifyMode = true;
+      isFromGoogleSignIn = true;
+      goStep(4);
+
+      document.getElementById('panel-4-title').textContent = '修改應徵預約紀錄';
+      document.getElementById('query-booking-container').style.display = 'block';
+      document.getElementById('google-signin-section').style.display = 'none';
+      document.getElementById('step4-back-btn').style.display = 'none';
+      document.getElementById('step4-cancel-modify-btn').style.display = 'inline-flex';
+      document.getElementById('submit-btn').style.display = 'none';
+      document.getElementById('confirm-modify-btn').style.display = 'inline-flex';
+      document.getElementById('confirm-modify-btn').disabled = false;
+
+      document.getElementById('applicant-email').value = googleEmail;
+      document.getElementById('applicant-email').disabled = true;
+      document.getElementById('email-hint').style.display = 'inline';
+
+      document.getElementById('applicant-name').disabled = false;
+      document.getElementById('applicant-phone').disabled = false;
+
+      document.getElementById('applicant-name').value = d.applicant_name|| '';
+      document.getElementById('applicant-phone').value = d.applicant_phone || d.phone || '';
+
+      const existEl = document.getElementById('existing-booking-info');
+      existEl.innerHTML = `
+        <div style="font-weight:600;margin-bottom:8px">您目前的既有預約：</div>
+        <div style="margin:6px 0">職缺：${d.position_title || '未提供'}</div>
+        <div style="margin:6px 0">日期：${d.slot_date || ''}</div>
+        <div style="margin:6px 0">時間：${d.start_time ? d.start_time.slice(0,5) : ''} – ${d.end_time ? d.end_time.slice(0,5) : ''}</div>
+      `;
+      existEl.style.display = 'block';
+
+      document.getElementById('reselect-inline-container').style.display = 'block';
+      if (d.position_id) {
+        document.getElementById('inline-position-select').value = d.position_id;
+        selectedPositionId = d.position_id;
+        selectedPositionTitle = d.position_title || '';
+
+        await fetchAndPopulateInlineSlots(d.slot_id, {
+          date: d.slot_date,
+          start: d.start_time,
+          end: d.end_time
+        });
+
+        selectedSlot = {
+          id: String(d.slot_id),
+          date: d.slot_date,
+          start: d.start_time ? d.start_time.slice(0, 5) : '',
+          end: d.end_time ? d.end_time.slice(0, 5) : ''
+        };
+
+        updateSelectedSlotInfo();
+      }
+
+      toast('Google 帳號登入成功，已讀取您的預約紀錄');
+    } else {
+      console.log('[DEBUG] No existing booking found (404), entering new booking mode');
+      enterNewBookingFromGoogle(googleEmail);
+    }
+  } catch (err) {
+    console.error('[DEBUG] 查詢預約紀錄失敗:', err);
+    enterNewBookingFromGoogle(googleEmail);
+  }
+}
+
+function enterNewBookingFromGoogle(googleEmail) {
+  console.log('[DEBUG] enterNewBookingFromGoogle called with:', googleEmail);
+  // 還原登入前已選的狀態（因 OAuth 跳轉會清掉所有 JS 變數）
+  const saved = sessionStorage.getItem('preLoginState');
+  if (saved) {
+    try {
+      const state = JSON.parse(saved);
+      selectedCompanyValue  = state.selectedCompanyValue  || '';
+      selectedCompanyName   = state.selectedCompanyName   || '';
+      selectedPositionId    = state.selectedPositionId    || null;
+      selectedPositionTitle = state.selectedPositionTitle || '';
+      selectedSlot          = state.selectedSlot          || null;
+    } catch(e) {}
+    sessionStorage.removeItem('preLoginState');
+  }
+
+  isFromGoogleSignIn = true;
+  isExplicitModifyMode = false;
+
+  goStep(4);
+
+  document.getElementById('panel-4-title').textContent = '填寫應徵者資料';
+  document.getElementById('query-booking-container').style.display = 'none';
+  document.getElementById('google-signin-section').style.display = 'none';
+  document.getElementById('reselect-inline-container').style.display = 'none';
+  // 只在尚未選時段時才清空顯示
+  if (!selectedSlot) {
+    document.getElementById('selected-slot-info').innerHTML = '';
+    document.getElementById('selected-slot-info').style.display = 'none';
+  }
+
+  document.getElementById('step4-back-btn').style.display = 'inline-flex';
+  document.getElementById('step4-cancel-modify-btn').style.display = 'none';
+  document.getElementById('submit-btn').style.display = 'inline-flex';
+  document.getElementById('confirm-modify-btn').style.display = 'none';
+
+  console.log('[DEBUG] About to set applicant-email to:', googleEmail);
+  document.getElementById('applicant-email').value = googleEmail;
+  console.log('[DEBUG] After setting, applicant-email value is:', document.getElementById('applicant-email').value);
+  document.getElementById('applicant-email').disabled = true;
+  document.getElementById('email-hint').style.display = 'inline';
+  document.getElementById('email-hint').textContent = '(使用 Google 帳號登入自動填入)';
+
+  document.getElementById('applicant-name').value = '';
+  document.getElementById('applicant-name').disabled = false;
+  document.getElementById('applicant-phone').disabled = false;
+
+  document.getElementById('applicant-phone').focus();
+
+  // 只在使用者登入前尚未選擇職缺時才清空
+  // 若已從步驟 2/3 選好職缺與時段，保留原本的值
+  if (!selectedPositionId) {
+    document.getElementById('inline-position-select').value = '';
+    document.getElementById('inline-slot-select').innerHTML = '<option value="">— 請先選擇上方職缺 —</option>';
+    selectedPositionTitle = '';
+    selectedSlot = null;
+    toast('Google 帳號登入成功，請選擇應徵職缺和面試時段');
+  } else {
+    // 同步 inline-position-select 的顯示值（原本是從 panel-2 的 select 選的）
+    document.getElementById('inline-position-select').value = selectedPositionId;
+    toast('Google 帳號登入成功，已保留您先前選擇的職缺與時段');
+  }
+}
+
+window.addEventListener('DOMContentLoaded', checkGoogleSignInCallback);
+</script>
+</body>
+</html>

@@ -1,0 +1,43 @@
+# Python 編譯檔
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# 虛擬環境
+.venv/
+venv/
+env/
+
+# IDE
+.vscode/
+.idea/
+
+# 環境變數
+.env
+.env.example
+
+# 日誌
+.log
+*.log
+
+# Build
+build/
+dist/
+*.egg-info/
+
+# Windows
+Thumbs.db
+
+# 身分認證 / 機密金鑰
+token.json
+credentials.json
+google_service_account.json
+*.json.key
+
+# 本機資料庫檔案（不應進版控；正式環境用 PostgreSQL，
+# events.db 屬於應用程式執行期狀態，部署時用 Volume 持久化，不是用 git 帶上去）
+events.db
+interview_platform.db
+*.db
+*.sqlite3
