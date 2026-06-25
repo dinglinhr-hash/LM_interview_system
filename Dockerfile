@@ -38,14 +38,18 @@ RUN --mount=type=cache,target=/root/.cache/pip \
     --mount=type=bind,source=requirements.txt,target=requirements.txt \
     python -m pip install -r requirements.txt
 
-# Switch to the non-privileged user to run the application.
-USER appuser
-
 # Copy the source code into the container.
 COPY . .
 
-# Expose the port that the application listens on.
-EXPOSE 4459
+# entrypoint.sh 會動態讀取 Zeabur（或其他平台）注入的 PORT 環境變數來啟動 uvicorn，
+# 避免 port 寫死跟平台實際轉發的埠號不一致而出現 502 Bad Gateway。
+RUN chmod +x /app/entrypoint.sh && chown -R appuser /app
+
+# Switch to the non-privileged user to run the application.
+USER appuser
+
+# Expose the port that the application listens on (文件用途；實際監聽埠號由 PORT 決定).
+EXPOSE 5000
 
 # Run the application.
-CMD python -m uvicorn main:app --host 0.0.0.0 --port 4459
+CMD ["/app/entrypoint.sh"]
