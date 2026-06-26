@@ -1,7 +1,7 @@
 """
 Position / group slot visibility rules for applicant booking.
 
-- Default (position not in a multi-position group): position-exclusive lock.
+- Default (position not in a multi-position group): no restriction, capacity controlled by max_capacity.
 - Multi-position rule: any active booking by a group member hides the slot for all members.
 """
 from __future__ import annotations
@@ -104,8 +104,8 @@ def slot_blocked_for_position(
             _rule_blocks(rule, booked_position_ids, position_id) for rule in rules
         )
 
-    # Default: position-exclusive when no HR rule covers this position
-    return position_id in booked_position_ids
+    # 沒有設定任何 rule 的職位：不做限制，由 slot max_capacity 控制名額
+    return False
 
 
 async def is_slot_available_for_position(
